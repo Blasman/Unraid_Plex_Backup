@@ -11,15 +11,16 @@
 PLEX_DIR="/mnt/primary/appdata/plex/Library/Application Support/Plex Media Server"  # "Plex Media Server" folder location *within* the plex appdata folder.
 BACKUP_DIR="/mnt/user/Backup/Plex Metadata Backups"  # Backup folder location.
 BACKUP_FILENAME="Plex Metadata Backup"  # Filename of .tar file without the .tar extension. Comes after the timestamp in the filename.
-HOURS_TO_KEEP_BACKUPS_FOR="324"  # Delete backups older than this many hours. Set to any other value or comment out/delete to disable.
-STOP_PLEX_DOCKER=false  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. Set to any other value or comment out/delete to disable.
+HOURS_TO_KEEP_BACKUPS_FOR="324"  # Delete backups older than this many hours. Comment out or delete to disable.
+STOP_PLEX_DOCKER=false  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. Comment out or delete to disable.
 PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
-PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the final tar file. Set to any other value or comment out/delete to disable.
-RUN_MOVER_BEFORE_BACKUP=true  # Run Unraid's 'mover' BEFORE backing up. Set to "true" (without quotes) to use. Set to any other value or comment out/delete to disable.
-RUN_MOVER_AFTER_BACKUP=true  # Run Unraid's 'mover' AFTER backing up. Set to "true" (without quotes) to use. Set to any other value or comment out/delete to disable.
+PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the final tar file. Comment out or delete to disable.
+RUN_MOVER_BEFORE_BACKUP=true  # Run Unraid's 'mover' BEFORE backing up. Set to "true" (without quotes) to use. Comment out or delete to disable.
+RUN_MOVER_AFTER_BACKUP=true  # Run Unraid's 'mover' AFTER backing up. Set to "true" (without quotes) to use. Comment out or delete to disable.
+UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
 TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # Optionally customize TIMESTAMP for the tar filename.
 TAR_COMMAND() {  # Optionally customize the TAR command. Use "$TAR_FILE" for the tar file name. This command is ran from within the $PLEX_DIR directory.
-    tar -cf "$TAR_FILE" "Media" "Metadata"
+    tar -cf "$TAR_FILE" "Logs"
 }
 
 #########################################################
@@ -102,6 +103,11 @@ set_permissions() {
     echo_ts "Successfully set permissions on tar file."
 }
 
+# Function to send backup success notification to Unraid's Web GUI.
+send_success_msg_to_unraid_webgui() {
+    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex Tar Back Up Complete." -d "Successfully created tar file '$TAR_FILE'."
+}
+
 ###############################################
 ############# BACKUP BEGINS HERE ##############
 ###############################################
@@ -139,6 +145,9 @@ if [[ $PERMISSIONS =~ ^[0-9]{3,4}$ ]]; then set_permissions; fi
 
 # Backup completed message.
 echo_ts "[PLEX TARBALL BACKUP COMPLETE] Backed created at '$TAR_FILE'."
+
+# Send backup completed notification to Unraid's Web GUI.
+if [[ $UNRAID_WEBGUI_SUCCESS_MSG = true ]]; then send_success_msg_to_unraid_webgui; fi
 
 # Run mover after Backup.
 if [[ $RUN_MOVER_AFTER_BACKUP = true ]]; then run_mover; fi
