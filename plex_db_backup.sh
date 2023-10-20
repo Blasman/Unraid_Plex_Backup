@@ -107,14 +107,14 @@ check_directory_existence "$PLEX_DIR"
 # Start backup message.
 echo_ts "[PLEX BACKUP STARTED]"
 
+# Stop Plex Docker.
+if [[ $STOP_PLEX_DOCKER = true ]]; then stop_plex; fi
+
 # Create sub-directory name with the custom timestamp.
 BACKUP_PATH="$BACKUP_DIR/$(COMPLETE_SUBDIR_NAME)"
 
 # Create the backup sub-directory.
 mkdir -p "$BACKUP_PATH"
-
-# Stop Plex Docker.
-if [[ $STOP_PLEX_DOCKER = true ]]; then stop_plex; fi
 
 # Copy the files from Plex to the backup sub-directory.
 backup_files
