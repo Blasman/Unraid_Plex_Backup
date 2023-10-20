@@ -125,14 +125,14 @@ if [[ $RUN_MOVER_BEFORE_BACKUP = true ]]; then run_mover; fi
 # Start backup message.
 echo_ts "[PLEX TARBALL BACKUP STARTED]"
 
+# Stop Plex Docker.
+if [[ $STOP_PLEX_DOCKER = true ]]; then stop_plex; fi
+
 # Navigate to $PLEX_DIR working direcotry.
 cd "$PLEX_DIR"
 
 # Create sub-directory name with the custom timestamp.
 TAR_FILE="$BACKUP_DIR/$(COMPLETE_TARFILE_NAME)"
-
-# Stop Plex Docker.
-if [[ $STOP_PLEX_DOCKER = true ]]; then stop_plex; fi
 
 # Create the tar file.
 create_tar_file
