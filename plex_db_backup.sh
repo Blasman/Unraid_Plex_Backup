@@ -11,17 +11,17 @@
 
 PLEX_DIR="/mnt/primary/appdata/plex/Library/Application Support/Plex Media Server"  # "Plex Media Server" folder location *within* the plex appdata folder.
 BACKUP_DIR="/mnt/user/Backup/Plex DB Backups"  # Backup folder location.
-SUBDIR_NAME="Plex DB Backup"  # Name of the backup folder sub-directory created for each backup. Comes after the timestamp in the directory name.
 HOURS_TO_KEEP_BACKUPS_FOR="95"  # Delete backups older than this many hours. Comment out or delete to disable.
 STOP_PLEX_DOCKER=true  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. Comment out or delete to disable.
 PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
 PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the final tar file. Comment out or delete to disable.
 UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
-TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # Optionally customize TIMESTAMP for sub-directory name.
-BACKUP_COMMAND() {  # Optionally customize the function that copies the files.
-    cp "$PLEX_DIR/Preferences.xml" "$BACKUP_SUBDIR/Preferences.xml"
-    cp "$PLEX_DIR/Plug-in Support/Databases/com.plexapp.plugins.library.db" "$BACKUP_SUBDIR/com.plexapp.plugins.library.db"
-    cp "$PLEX_DIR/Plug-in Support/Databases/com.plexapp.plugins.library.blobs.db" "$BACKUP_SUBDIR/com.plexapp.plugins.library.blobs.db"
+TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # OPTIONALLY customize TIMESTAMP for sub-directory name.
+COMPLETE_SUBDIR_NAME() { echo "[$(TIMESTAMP)] Plex DB Backup"; }  # OPTIONALLY customize the complete sub-directory name with the TIMESTAMP.
+BACKUP_COMMAND() {  # OPTIONALLY customize the function that copies the files.
+    cp "$PLEX_DIR/Preferences.xml" "$BACKUP_PATH/Preferences.xml"
+    cp "$PLEX_DIR/Plug-in Support/Databases/com.plexapp.plugins.library.db" "$BACKUP_PATH/com.plexapp.plugins.library.db"
+    cp "$PLEX_DIR/Plug-in Support/Databases/com.plexapp.plugins.library.blobs.db" "$BACKUP_PATH/com.plexapp.plugins.library.blobs.db"
 }
 
 #########################################################
@@ -64,7 +64,7 @@ start_plex() {
 # Function to set permissions on the backup sub-directory.
 set_permissions() {
     echo_ts "Running 'chmod -R $PERMISSIONS' on backup sub-directory..."
-    chmod -R $PERMISSIONS "$BACKUP_SUBDIR"
+    chmod -R $PERMISSIONS "$BACKUP_PATH"
     echo_ts "Successfully set permissions on backup sub-directory."
 }
 
@@ -93,7 +93,7 @@ delete_old_backups() {
 
 # Function to send backup success notification to Unraid's Web GUI.
 send_success_msg_to_unraid_webgui() {
-    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex DB Back Up Complete." -d "Successfully backed up files to '$BACKUP_SUBDIR'."
+    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex DB Back Up Complete." -d "Successfully backed up files to '$BACKUP_PATH'."
 }
 
 ###############################################
@@ -107,11 +107,11 @@ check_directory_existence "$PLEX_DIR"
 # Start backup message.
 echo_ts "[PLEX BACKUP STARTED]"
 
-# Custom sub-directory name with the custom timestamp.
-BACKUP_SUBDIR="$BACKUP_DIR/[$(TIMESTAMP)] $SUBDIR_NAME"
+# Create sub-directory name with the custom timestamp.
+BACKUP_PATH="$BACKUP_DIR/$(COMPLETE_SUBDIR_NAME)"
 
 # Create the backup sub-directory.
-mkdir -p "$BACKUP_SUBDIR"
+mkdir -p "$BACKUP_PATH"
 
 # Stop Plex Docker.
 if [[ $STOP_PLEX_DOCKER = true ]]; then stop_plex; fi
@@ -129,7 +129,7 @@ if [[ $PERMISSIONS =~ ^[0-9]{3,4}$ ]]; then set_permissions; fi
 if [[ $HOURS_TO_KEEP_BACKUPS_FOR =~ ^[0-9]+(\.[0-9]+)?$ ]]; then delete_old_backups; fi
 
 # Backup completed message.
-echo_ts "[PLEX BACKUP COMPLETE] Backed created at '$BACKUP_SUBDIR'."
+echo_ts "[PLEX BACKUP COMPLETE] Backed created at '$BACKUP_PATH'."
 
 # Send backup completed notification to Unraid's Web GUI.
 if [[ $UNRAID_WEBGUI_SUCCESS_MSG = true ]]; then send_success_msg_to_unraid_webgui; fi
