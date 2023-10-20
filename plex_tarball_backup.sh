@@ -63,9 +63,15 @@ delete_old_backups() {
 
 # Function to run Unraid's 'mover'.
 run_mover() {
-    echo_ts "Started 'mover'"
-    mover
-    echo_ts "Finished 'mover'"
+    local mover_status=""
+    mover_status=$(mover status)
+    if [[ $mover_status == *"mover: not running"* ]]; then
+        echo_ts "Started 'mover'..."
+        mover start >/dev/null
+        echo_ts "Finished 'mover'."
+    else
+        echo_ts "Skipping 'mover' because it is currently active."
+    fi
 }
 
 # Function to stop Plex docker.
