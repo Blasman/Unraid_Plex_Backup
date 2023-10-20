@@ -14,6 +14,7 @@ BACKUP_DIR="/mnt/user/Backup/Plex DB Backups"  # Backup folder location.
 SUBDIR_NAME="Plex DB Backup"  # Name of the backup folder sub-directory created for each backup. Comes after the timestamp in the directory name.
 HOURS_TO_KEEP_BACKUPS_FOR="95"  # Delete backups older than this many hours. Set to any other value or comment out/delete to disable.
 STOP_PLEX_DOCKER=true  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. Set to any other value or comment out/delete to disable.
+PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
 PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the final tar file. Set to any other value or comment out/delete to disable.
 TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # Optionally customize TIMESTAMP for sub-directory name.
 BACKUP_COMMAND() {  # Optionally customize the function that copies the files.
@@ -41,7 +42,7 @@ check_directory_existence() {
 # Function to stop Plex docker.
 stop_plex() {
     echo_ts "Stopping Plex Server..."
-    docker stop plex >/dev/null
+    docker stop "$PLEX_DOCKER_NAME" >/dev/null
     echo_ts "Plex Server stopped."
 }
 
@@ -55,7 +56,7 @@ backup_files() {
 # Function to start Plex docker.
 start_plex() {
     echo_ts "Starting Plex Server..."
-    docker start plex >/dev/null
+    docker start "$PLEX_DOCKER_NAME" >/dev/null
     echo_ts "Plex Server started."
 }
 
