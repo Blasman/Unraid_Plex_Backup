@@ -12,10 +12,11 @@
 PLEX_DIR="/mnt/primary/appdata/plex/Library/Application Support/Plex Media Server"  # "Plex Media Server" folder location *within* the plex appdata folder.
 BACKUP_DIR="/mnt/user/Backup/Plex DB Backups"  # Backup folder location.
 SUBDIR_NAME="Plex DB Backup"  # Name of the backup folder sub-directory created for each backup. Comes after the timestamp in the directory name.
-HOURS_TO_KEEP_BACKUPS_FOR="95"  # Delete backups older than this many hours. Set to any other value or comment out/delete to disable.
-STOP_PLEX_DOCKER=true  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. Set to any other value or comment out/delete to disable.
+HOURS_TO_KEEP_BACKUPS_FOR="95"  # Delete backups older than this many hours. Comment out or delete to disable.
+STOP_PLEX_DOCKER=true  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. Comment out or delete to disable.
 PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
-PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the final tar file. Set to any other value or comment out/delete to disable.
+PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the final tar file. Comment out or delete to disable.
+UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
 TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # Optionally customize TIMESTAMP for sub-directory name.
 BACKUP_COMMAND() {  # Optionally customize the function that copies the files.
     cp "$PLEX_DIR/Preferences.xml" "$BACKUP_SUBDIR/Preferences.xml"
@@ -90,6 +91,11 @@ delete_old_backups() {
     done
 }
 
+# Function to send backup success notification to Unraid's Web GUI.
+send_success_msg_to_unraid_webgui() {
+    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex DB Back Up Complete." -d "Successfully backed up files to '$BACKUP_SUBDIR'."
+}
+
 ###############################################
 ############# BACKUP BEGINS HERE ##############
 ###############################################
@@ -124,6 +130,9 @@ if [[ $HOURS_TO_KEEP_BACKUPS_FOR =~ ^[0-9]+(\.[0-9]+)?$ ]]; then delete_old_back
 
 # Backup completed message.
 echo_ts "[PLEX BACKUP COMPLETE] Backed created at '$BACKUP_SUBDIR'."
+
+# Send backup completed notification to Unraid's Web GUI.
+if [[ $UNRAID_WEBGUI_SUCCESS_MSG = true ]]; then send_success_msg_to_unraid_webgui; fi
 
 # Exit with success.
 exit 0
