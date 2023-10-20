@@ -46,7 +46,7 @@ get_tarfile_age() {
     echo "$age"
 }
 
-# Function to remove old backup tar files.
+# Function to delete old backup tar files.
 delete_old_backups() {
     local cutoff_age=$(($HOURS_TO_KEEP_BACKUPS_FOR * 3600))
     for tarfile in "$BACKUP_DIR"/*.tar; do
