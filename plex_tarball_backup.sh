@@ -10,7 +10,6 @@
 
 PLEX_DIR="/mnt/primary/appdata/plex/Library/Application Support/Plex Media Server"  # "Plex Media Server" folder location *within* the plex appdata folder.
 BACKUP_DIR="/mnt/user/Backup/Plex Metadata Backups"  # Backup folder location.
-BACKUP_FILENAME="Plex Metadata Backup"  # Filename of .tar file without the .tar extension. Comes after the timestamp in the filename.
 HOURS_TO_KEEP_BACKUPS_FOR="324"  # Delete backups older than this many hours. Comment out or delete to disable.
 STOP_PLEX_DOCKER=false  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. Comment out or delete to disable.
 PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
@@ -18,8 +17,9 @@ PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permi
 RUN_MOVER_BEFORE_BACKUP=true  # Run Unraid's 'mover' BEFORE backing up. Set to "true" (without quotes) to use. Comment out or delete to disable.
 RUN_MOVER_AFTER_BACKUP=true  # Run Unraid's 'mover' AFTER backing up. Set to "true" (without quotes) to use. Comment out or delete to disable.
 UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
-TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # Optionally customize TIMESTAMP for the tar filename.
-TAR_COMMAND() {  # Optionally customize the TAR command. Use "$TAR_FILE" for the tar file name. This command is ran from within the $PLEX_DIR directory.
+TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # OPTIONALLY customize TIMESTAMP for the tar filename.
+COMPLETE_TARFILE_NAME() { echo "[$(TIMESTAMP)] Plex Metadata Backup.tar"; }  # OPTIONALLY customize the complete tar file name with the TIMESTAMP.
+TAR_COMMAND() {  # OPTIONALLY customize the TAR command. Use "$TAR_FILE" for the tar file name. This command is ran from within the $PLEX_DIR directory.
     tar -cf "$TAR_FILE" "Media" "Metadata"
 }
 
@@ -128,8 +128,8 @@ echo_ts "[PLEX TARBALL BACKUP STARTED]"
 # Navigate to $PLEX_DIR working direcotry.
 cd "$PLEX_DIR"
 
-# Determine full path and filename for tar backup file.
-TAR_FILE="$BACKUP_DIR/[$(TIMESTAMP)] $BACKUP_FILENAME.tar"
+# Create sub-directory name with the custom timestamp.
+TAR_FILE="$BACKUP_DIR/$(COMPLETE_TARFILE_NAME)"
 
 # Stop Plex Docker.
 if [[ $STOP_PLEX_DOCKER = true ]]; then stop_plex; fi
