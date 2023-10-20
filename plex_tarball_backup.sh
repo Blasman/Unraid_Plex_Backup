@@ -20,7 +20,7 @@ RUN_MOVER_AFTER_BACKUP=true  # Run Unraid's 'mover' AFTER backing up. Set to "tr
 UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
 TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # Optionally customize TIMESTAMP for the tar filename.
 TAR_COMMAND() {  # Optionally customize the TAR command. Use "$TAR_FILE" for the tar file name. This command is ran from within the $PLEX_DIR directory.
-    tar -cf "$TAR_FILE" "Logs"
+    tar -cf "$TAR_FILE" "Media" "Metadata"
 }
 
 #########################################################
