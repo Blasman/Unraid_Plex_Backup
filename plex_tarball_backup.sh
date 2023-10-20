@@ -1,26 +1,27 @@
 #!/bin/bash
 
-# This script is designed to backup only the essential files that *DO NOT* require the Plex server to be shut down.
-# By default, this script will backup the "Media" and "Metadata" folders of Plex to a tar file with a timestamp of the current time.
-# You can edit the tar command used in the config below. (ie. specify different folders/files to backup, use compression, etc.)
+# This script is designed to backup only the essential files that *DO* require the Plex server to be shut down.
+# By default, these are the two DB files 'com.plexapp.plugins.library.db' 'com.plexapp.plugins.library.blobs.db' and 'Preferences.xml'.
+# The files are placed in their own sub-folder (with a timestamp of the current time) within the specified backup directory.
+# You can edit the default copy function in the config below to specify different folders/files to backup.
 
 #########################################################
 ################### USER CONFIG BELOW ###################
 #########################################################
 
 PLEX_DIR="/mnt/primary/appdata/plex/Library/Application Support/Plex Media Server"  # "Plex Media Server" folder location *within* the plex appdata folder.
-BACKUP_DIR="/mnt/user/Backup/Plex Metadata Backups"  # Backup folder location.
-HOURS_TO_KEEP_BACKUPS_FOR="324"  # Delete backups older than this many hours. Comment out or delete to disable.
+BACKUP_DIR="/mnt/user/Backup/Plex DB Backups"  # Backup folder location.
+HOURS_TO_KEEP_BACKUPS_FOR="95"  # Delete backups older than this many hours. Comment out or delete to disable.
 STOP_PLEX_DOCKER=false  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. Comment out or delete to disable.
 PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
 PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the final tar file. Comment out or delete to disable.
-RUN_MOVER_BEFORE_BACKUP=true  # Run Unraid's 'mover' BEFORE backing up. Set to "true" (without quotes) to use. Comment out or delete to disable.
-RUN_MOVER_AFTER_BACKUP=true  # Run Unraid's 'mover' AFTER backing up. Set to "true" (without quotes) to use. Comment out or delete to disable.
 UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
-TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # OPTIONALLY customize TIMESTAMP for the tar filename.
-COMPLETE_TARFILE_NAME() { echo "[$(TIMESTAMP)] Plex Metadata Backup.tar"; }  # OPTIONALLY customize the complete tar file name with the TIMESTAMP.
-TAR_COMMAND() {  # OPTIONALLY customize the TAR command. Use "$TAR_FILE" for the tar file name. This command is ran from within the $PLEX_DIR directory.
-    tar -cf "$TAR_FILE" "Media" "Metadata"
+TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # OPTIONALLY customize TIMESTAMP for sub-directory name.
+COMPLETE_SUBDIR_NAME() { echo "[$(TIMESTAMP)] Plex DB Backup"; }  # OPTIONALLY customize the complete sub-directory name with the TIMESTAMP.
+BACKUP_COMMAND() {  # OPTIONALLY customize the function that copies the files.
+    cp "$PLEX_DIR/Preferences.xml" "$BACKUP_PATH/Preferences.xml"
+    cp "$PLEX_DIR/Plug-in Support/Databases/com.plexapp.plugins.library.db" "$BACKUP_PATH/com.plexapp.plugins.library.db"
+    cp "$PLEX_DIR/Plug-in Support/Databases/com.plexapp.plugins.library.blobs.db" "$BACKUP_PATH/com.plexapp.plugins.library.blobs.db"
 }
 
 #########################################################
@@ -39,42 +40,6 @@ check_directory_existence() {
     fi
 }
 
-# Function to calculate the age of a tar file in seconds.
-get_tarfile_age() {
-    local tarfile="$1"
-    local current_time=$(date +%s)
-    local tarfile_creation_time=$(stat -c %Y "$tarfile")
-    local age=$((current_time - tarfile_creation_time))
-    echo "$age"
-}
-
-# Function to delete old backup tar files.
-delete_old_backups() {
-    local cutoff_age=$(($HOURS_TO_KEEP_BACKUPS_FOR * 3600))
-    for tarfile in "$BACKUP_DIR"/*.tar; do
-        if [ -f "$tarfile" ]; then
-            local tarfile_age=$(get_tarfile_age "$tarfile")
-            if [ "$tarfile_age" -gt "$cutoff_age" ]; then
-                rm -rf "$tarfile"
-                echo_ts "Deleted old backup: $tarfile"
-            fi
-        fi
-    done
-}
-
-# Function to run Unraid's 'mover'.
-run_mover() {
-    local mover_status=""
-    mover_status=$(mover status)
-    if [[ $mover_status == *"mover: not running"* ]]; then
-        echo_ts "Started 'mover'..."
-        mover start >/dev/null
-        echo_ts "Finished 'mover'."
-    else
-        echo_ts "Skipping 'mover' because it is currently active."
-    fi
-}
-
 # Function to stop Plex docker.
 stop_plex() {
     echo_ts "Stopping Plex Server..."
@@ -82,11 +47,11 @@ stop_plex() {
     echo_ts "Plex Server stopped."
 }
 
-# Function to create the tar file.
-create_tar_file() {
-    echo_ts "Creating tar file..." 
-    TAR_COMMAND
-    echo_ts "Tar file created."
+# Function to back up the files.
+backup_files() {
+    echo_ts "Copying Files..."
+    BACKUP_COMMAND
+    echo_ts "Files copied."
 }
 
 # Function to start Plex docker.
@@ -96,61 +61,78 @@ start_plex() {
     echo_ts "Plex Server started."
 }
 
-# Function to set permissions on the tar file.
+# Function to set permissions on the backup sub-directory.
 set_permissions() {
-    echo_ts "Running 'chmod $PERMISSIONS' on tar file..."
-    chmod $PERMISSIONS "$TAR_FILE"
-    echo_ts "Successfully set permissions on tar file."
+    echo_ts "Running 'chmod -R $PERMISSIONS' on backup sub-directory..."
+    chmod -R $PERMISSIONS "$BACKUP_PATH"
+    echo_ts "Successfully set permissions on backup sub-directory."
+}
+
+# Function to calculate the age of a directory in seconds.
+get_directory_age() {
+    local dir="$1"
+    local current_time=$(date +%s)
+    local dir_creation_time=$(stat -c %Y "$dir")
+    local age=$((current_time - dir_creation_time))
+    echo "$age"
+}
+
+# Function to delete old backup directories. Be careful if editing.
+delete_old_backups() {
+    local cutoff_age=$(($HOURS_TO_KEEP_BACKUPS_FOR * 3600))
+    for dir in "$BACKUP_DIR"/*; do
+        if [ -d "$dir" ]; then
+            local dir_age=$(get_directory_age "$dir")
+            if [ "$dir_age" -gt "$cutoff_age" ]; then
+                rm -rf "$dir"
+                echo_ts "Deleted old Plex Backup: '$(basename "$dir")'"
+            fi
+        fi
+    done
 }
 
 # Function to send backup success notification to Unraid's Web GUI.
 send_success_msg_to_unraid_webgui() {
-    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex Tar Back Up Complete." -d "Successfully created tar file '$TAR_FILE'."
+    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex DB Back Up Complete." -d "Successfully backed up files to '$BACKUP_PATH'."
 }
 
 ###############################################
 ############# BACKUP BEGINS HERE ##############
 ###############################################
 
-# Check if BACKUP_DIR and PLEX_DIR exist.
+# Check if BACKUP_DIR and PLEX_DIR exist. Do not remove from script.
 check_directory_existence "$BACKUP_DIR"
 check_directory_existence "$PLEX_DIR"
 
-# Delete old backup tar files first to create more usable storage space.
-if [[ $HOURS_TO_KEEP_BACKUPS_FOR =~ ^[0-9]+(\.[0-9]+)?$ ]]; then delete_old_backups; fi
-
-# Run mover before Backup.
-if [[ $RUN_MOVER_BEFORE_BACKUP = true ]]; then run_mover; fi
-
 # Start backup message.
-echo_ts "[PLEX TARBALL BACKUP STARTED]"
-
-# Navigate to $PLEX_DIR working direcotry.
-cd "$PLEX_DIR"
+echo_ts "[PLEX BACKUP STARTED]"
 
 # Create sub-directory name with the custom timestamp.
-TAR_FILE="$BACKUP_DIR/$(COMPLETE_TARFILE_NAME)"
+BACKUP_PATH="$BACKUP_DIR/$(COMPLETE_SUBDIR_NAME)"
+
+# Create the backup sub-directory.
+mkdir -p "$BACKUP_PATH"
 
 # Stop Plex Docker.
 if [[ $STOP_PLEX_DOCKER = true ]]; then stop_plex; fi
 
-# Create the tar file.
-create_tar_file
+# Copy the files from Plex to the backup sub-directory.
+backup_files
 
 # Start Plex Docker before doing anything else.
 if [[ $STOP_PLEX_DOCKER = true ]]; then start_plex; fi
 
-# Set permissions for the tar file.
+# Set permissions for the backup directory and its contents.
 if [[ $PERMISSIONS =~ ^[0-9]{3,4}$ ]]; then set_permissions; fi
 
+# Delete old backups.
+if [[ $HOURS_TO_KEEP_BACKUPS_FOR =~ ^[0-9]+(\.[0-9]+)?$ ]]; then delete_old_backups; fi
+
 # Backup completed message.
-echo_ts "[PLEX TARBALL BACKUP COMPLETE] Backed created at '$TAR_FILE'."
+echo_ts "[PLEX BACKUP COMPLETE] Backed created at '$BACKUP_PATH'."
 
 # Send backup completed notification to Unraid's Web GUI.
 if [[ $UNRAID_WEBGUI_SUCCESS_MSG = true ]]; then send_success_msg_to_unraid_webgui; fi
-
-# Run mover after Backup.
-if [[ $RUN_MOVER_AFTER_BACKUP = true ]]; then run_mover; fi
 
 # Exit with success.
 exit 0
