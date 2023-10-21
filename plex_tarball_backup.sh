@@ -41,10 +41,10 @@ echo_ts() { local ms=${EPOCHREALTIME#*.}; printf "[%(%Y_%m_%d)T %(%H:%M:%S)T.${m
 abort_script_run_due_to_active_plex_sessions() {
     response=$(curl -s --fail --connect-timeout 10 "${PLEX_SERVER_URL_AND_PORT}/status/sessions?X-Plex-Token=${PLEX_TOKEN}")
     if [[ $? -ne 0 ]] && [[ $ALSO_ABORT_ON_FAILED_CONNECTION = true ]]; then
-        echo_ts "[ERROR] Could not connect to Plex server. Aborting Plex DB Backup."
+        echo_ts "[ERROR] Could not connect to Plex server. Aborting Plex Metadata Backup."
         exit 1
     elif [[ $response == *'state="playing"'* ]] || ( [[ $INCLUDE_PAUSED_SESSIONS = true ]] && [[ $response == *'state="paused"'* ]] ); then
-        echo_ts "Active users on Plex server. Aborting Plex DB Backup."
+        echo_ts "Active users on Plex server. Aborting Plex Metadata Backup."
         exit 0
     fi
 }
