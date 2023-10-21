@@ -16,6 +16,7 @@ PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' va
 PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the final tar file. Comment out or delete to disable.
 RUN_MOVER_BEFORE_BACKUP=true  # Run Unraid's 'mover' BEFORE backing up. Set to "true" (without quotes) to use. Comment out or delete to disable.
 RUN_MOVER_AFTER_BACKUP=true  # Run Unraid's 'mover' AFTER backing up. Set to "true" (without quotes) to use. Comment out or delete to disable.
+UNRAID_WEBGUI_START_MSG=true  # Send backup start message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
 UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
 #----------- OPTIONAL ADVANCED CONFIG BELOW ------------#
 TARFILE_TEXT="Plex Metadata Backup"  # OPTIONALLY customize the text for the backup tar file. As a precaution, the script only deletes old backups that match this pattern.
@@ -99,6 +100,11 @@ run_mover() {
     fi
 }
 
+# Function to send backup start notification to Unraid's Web GUI.
+send_start_msg_to_unraid_webgui() {
+    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex Tar Back Up Started."
+}
+
 # Function to stop Plex docker.
 stop_plex() {
     echo_ts "Stopping Plex Server..."
@@ -155,6 +161,9 @@ if [[ $RUN_MOVER_BEFORE_BACKUP = true ]]; then run_mover; fi
 
 # Start backup message.
 echo_ts "[PLEX TARBALL BACKUP STARTED]"
+
+# Send backup started notification to Unraid's Web GUI.
+if [[ $UNRAID_WEBGUI_START_MSG = true ]]; then send_start_msg_to_unraid_webgui; fi
 
 # Stop Plex Docker.
 if [[ $STOP_PLEX_DOCKER = true ]]; then stop_plex; fi
