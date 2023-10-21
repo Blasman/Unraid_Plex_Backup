@@ -56,8 +56,8 @@ verify_valid_path_variables() {
         local clean_dir="${!dir}"
         clean_dir="${clean_dir%/}"  # Remove trailing slashes
         eval "$dir=\"$clean_dir\""  # Update the variable with the cleaned path
-        if [ ! -d "$clean_dir" ]; then
-            echo "[ERROR] Directory not found: $clean_dir"
+        if [ ! -d "$dir" ]; then
+            echo "[ERROR] Directory not found: $dir"
             exit 1
         fi
     done
