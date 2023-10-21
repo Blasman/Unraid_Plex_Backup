@@ -2,7 +2,7 @@
 
 # This script is designed to backup only the essential files that *DO* require the Plex server to be shut down.
 # By default, these are the two DB files 'com.plexapp.plugins.library.db' 'com.plexapp.plugins.library.blobs.db' and 'Preferences.xml'.
-# The files are placed in their own sub-folder (with a timestamp of the current time) within the specified backup directory.
+# The files are placed in their own sub-directory (with a timestamp of the current time) within the specified backup directory.
 # You can edit the default copy function in the config below to specify different folders/files to backup.
 
 #########################################################
