@@ -50,13 +50,15 @@ abort_script_run_due_to_active_plex_sessions() {
     fi
 }
 
-# Function to check the existence of a directory.
-check_directory_existence() {
-    local dir="$1"
-    if [ ! -d "$dir" ]; then
-        echo_ts "[ERROR] Directory not found: $dir"
-        exit 1
-    fi
+# Function to verify that "$BACKUP_DIR" and "$PLEX_DIR" are valid paths.
+verify_valid_path_variables() {
+    local dirs=("$BACKUP_DIR" "$PLEX_DIR")
+    for dir in "${dirs[@]}"; do
+        if [ ! -d "$dir" ]; then
+            echo "[ERROR] Directory not found: $dir"
+            exit 1
+        fi
+    done
 }
 
 # Function to stop Plex docker.
@@ -127,9 +129,8 @@ send_success_msg_to_unraid_webgui() {
 # Abort script if there are active users on the Plex server.
 if [[ $ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS = true ]]; then abort_script_run_due_to_active_plex_sessions; fi
 
-# Check if BACKUP_DIR and PLEX_DIR exist. Do not remove from script.
-check_directory_existence "$BACKUP_DIR"
-check_directory_existence "$PLEX_DIR"
+# Verify that $BACKUP_DIR and $PLEX_DIR are valid paths.
+verify_valid_path_variables
 
 # Start backup message.
 echo_ts "[PLEX BACKUP STARTED]"
