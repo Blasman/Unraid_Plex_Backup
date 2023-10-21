@@ -103,7 +103,12 @@ stop_plex() {
 
 # Function to create the tar file.
 create_tar_file() {
-    echo_ts "Creating tar file..." 
+    # Navigate to $PLEX_DIR working direcotry.
+    cd "$PLEX_DIR"
+    # Create sub-directory name with the custom timestamp.
+    TAR_FILE="$BACKUP_DIR/$(COMPLETE_TARFILE_NAME)"
+    echo_ts "Creating tar file..."
+    # Run the tar command.
     TAR_COMMAND
     echo_ts "Tar file created."
 }
@@ -149,12 +154,6 @@ echo_ts "[PLEX TARBALL BACKUP STARTED]"
 
 # Stop Plex Docker.
 if [[ $STOP_PLEX_DOCKER = true ]]; then stop_plex; fi
-
-# Navigate to $PLEX_DIR working direcotry.
-cd "$PLEX_DIR"
-
-# Create sub-directory name with the custom timestamp.
-TAR_FILE="$BACKUP_DIR/$(COMPLETE_TARFILE_NAME)"
 
 # Create the tar file.
 create_tar_file
