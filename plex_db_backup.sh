@@ -69,6 +69,11 @@ stop_plex() {
 # Function to back up the files.
 backup_files() {
     echo_ts "Copying Files..."
+    # Create sub-directory name with the custom timestamp.
+    BACKUP_PATH="$BACKUP_DIR/$(COMPLETE_SUBDIR_NAME)"
+    # Create the backup sub-directory.
+    mkdir -p "$BACKUP_PATH"
+    # Run the backup command.
     BACKUP_COMMAND
     echo_ts "Files copied."
 }
@@ -131,12 +136,6 @@ echo_ts "[PLEX BACKUP STARTED]"
 
 # Stop Plex Docker.
 if [[ $STOP_PLEX_DOCKER = true ]]; then stop_plex; fi
-
-# Create sub-directory name with the custom timestamp.
-BACKUP_PATH="$BACKUP_DIR/$(COMPLETE_SUBDIR_NAME)"
-
-# Create the backup sub-directory.
-mkdir -p "$BACKUP_PATH"
 
 # Copy the files from Plex to the backup sub-directory.
 backup_files
