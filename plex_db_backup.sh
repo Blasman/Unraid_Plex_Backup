@@ -11,13 +11,15 @@
 
 PLEX_DIR="/mnt/primary/appdata/plex/Library/Application Support/Plex Media Server"  # "Plex Media Server" folder location *within* the plex appdata folder.
 BACKUP_DIR="/mnt/user/Backup/Plex DB Backups"  # Backup folder location.
-HOURS_TO_KEEP_BACKUPS_FOR="95"  # Delete backups older than this many hours. Comment out or delete to disable.
+HOURS_TO_KEEP_BACKUPS_FOR="95"  # Delete backups older than this many hours. Comment out or delete to disable deletion of old backups.
 STOP_PLEX_DOCKER=true  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. Comment out or delete to disable.
 PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
 PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the final tar file. Comment out or delete to disable.
 UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
-TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # OPTIONALLY customize TIMESTAMP for sub-directory name.
-COMPLETE_SUBDIR_NAME() { echo "[$(TIMESTAMP)] Plex DB Backup"; }  # OPTIONALLY customize the complete sub-directory name with the TIMESTAMP.
+#------------ OPTIONAL ADVANCED CONFIG BELOW -----------#
+SUBDIR_TEXT="Plex DB Backup"  # OPTIONALLY customize the text for the backup sub-directory name. As a precaution, the script only deletes old backups that match this pattern.
+TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # OPTIONALLY customize TIMESTAMP for backup sub-directory name.
+COMPLETE_SUBDIR_NAME() { echo "[$(TIMESTAMP)] $SUBDIR_TEXT"; }  # OPTIONALLY customize the complete backup sub-directory name with the TIMESTAMP and SUBDIR_TEXT.
 BACKUP_COMMAND() {  # OPTIONALLY customize the function that copies the files.
     cp "$PLEX_DIR/Preferences.xml" "$BACKUP_PATH/Preferences.xml"
     cp "$PLEX_DIR/Plug-in Support/Databases/com.plexapp.plugins.library.db" "$BACKUP_PATH/com.plexapp.plugins.library.db"
@@ -80,7 +82,7 @@ get_directory_age() {
 # Function to delete old backup directories. Be careful if editing.
 delete_old_backups() {
     local cutoff_age=$(($HOURS_TO_KEEP_BACKUPS_FOR * 3600))
-    for dir in "$BACKUP_DIR"/*; do
+    for dir in "$BACKUP_DIR"/*"$SUBDIR_TEXT"*; do
         if [ -d "$dir" ]; then
             local dir_age=$(get_directory_age "$dir")
             if [ "$dir_age" -gt "$cutoff_age" ]; then
