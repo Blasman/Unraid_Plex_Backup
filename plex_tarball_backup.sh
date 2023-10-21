@@ -17,8 +17,10 @@ PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permi
 RUN_MOVER_BEFORE_BACKUP=true  # Run Unraid's 'mover' BEFORE backing up. Set to "true" (without quotes) to use. Comment out or delete to disable.
 RUN_MOVER_AFTER_BACKUP=true  # Run Unraid's 'mover' AFTER backing up. Set to "true" (without quotes) to use. Comment out or delete to disable.
 UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
+#------------ OPTIONAL ADVANCED CONFIG BELOW -----------#
+TARFILE_TEXT="Plex Metadata Backup"  # # OPTIONALLY customize the text for the backup tar file. As a precaution, the script only deletes old backups that match this pattern.
 TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # OPTIONALLY customize TIMESTAMP for the tar filename.
-COMPLETE_TARFILE_NAME() { echo "[$(TIMESTAMP)] Plex Metadata Backup.tar"; }  # OPTIONALLY customize the complete tar file name with the TIMESTAMP.
+COMPLETE_TARFILE_NAME() { echo "[$(TIMESTAMP)] $TARFILE_TEXT.tar"; }  # OPTIONALLY customize the complete tar file name (adding extension) with the TIMESTAMP and TARFILE_TEXT.
 TAR_COMMAND() {  # OPTIONALLY customize the TAR command. Use "$TAR_FILE" for the tar file name. This command is ran from within the $PLEX_DIR directory.
     tar -cf "$TAR_FILE" "Media" "Metadata"
 }
@@ -51,7 +53,7 @@ get_tarfile_age() {
 # Function to delete old backup tar files.
 delete_old_backups() {
     local cutoff_age=$(($HOURS_TO_KEEP_BACKUPS_FOR * 3600))
-    for tarfile in "$BACKUP_DIR"/*.tar; do
+    for tarfile in "$BACKUP_DIR"/*"$TARFILE_TEXT"*; do
         if [ -f "$tarfile" ]; then
             local tarfile_age=$(get_tarfile_age "$tarfile")
             if [ "$tarfile_age" -gt "$cutoff_age" ]; then
