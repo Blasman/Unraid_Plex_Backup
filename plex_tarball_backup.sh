@@ -49,13 +49,15 @@ abort_script_run_due_to_active_plex_sessions() {
     fi
 }
 
-# Function to check the existence of a directory.
-check_directory_existence() {
-    local dir="$1"
-    if [ ! -d "$dir" ]; then
-        echo_ts "[ERROR] Directory not found: $dir"
-        exit 1
-    fi
+# Function to verify that "$BACKUP_DIR" and "$PLEX_DIR" are valid paths.
+verify_valid_path_variables() {
+    local dirs=("$BACKUP_DIR" "$PLEX_DIR")
+    for dir in "${dirs[@]}"; do
+        if [ ! -d "$dir" ]; then
+            echo "[ERROR] Directory not found: $dir"
+            exit 1
+        fi
+    done
 }
 
 # Function to calculate the age of a tar file in seconds.
@@ -139,9 +141,8 @@ send_success_msg_to_unraid_webgui() {
 # Abort script if there are active users on the Plex server.
 if [[ $ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS = true ]]; then abort_script_run_due_to_active_plex_sessions; fi
 
-# Check if BACKUP_DIR and PLEX_DIR exist.
-check_directory_existence "$BACKUP_DIR"
-check_directory_existence "$PLEX_DIR"
+# Verify that $BACKUP_DIR and $PLEX_DIR are valid paths.
+verify_valid_path_variables
 
 # Delete old backup tar files first to create more usable storage space.
 if [[ $HOURS_TO_KEEP_BACKUPS_FOR =~ ^[0-9]+(\.[0-9]+)?$ ]]; then delete_old_backups; fi
