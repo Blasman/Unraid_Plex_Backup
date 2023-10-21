@@ -15,6 +15,7 @@ HOURS_TO_KEEP_BACKUPS_FOR="95"  # Delete backups older than this many hours. Com
 STOP_PLEX_DOCKER=true  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. Comment out or delete to disable.
 PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
 PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the backup sub-directory and files. Comment out or delete to disable.
+UNRAID_WEBGUI_START_MSG=true  # Send backup start message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
 UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
 #----------- OPTIONAL ADVANCED CONFIG BELOW ------------#
 SUBDIR_TEXT="Plex DB Backup"  # OPTIONALLY customize the text for the backup sub-directory name. As a precaution, the script only deletes old backups that match this pattern.
@@ -62,6 +63,11 @@ verify_valid_path_variables() {
             exit 1
         fi
     done
+}
+
+# Function to send backup start notification to Unraid's Web GUI.
+send_start_msg_to_unraid_webgui() {
+    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex DB Back Up Started."
 }
 
 # Function to stop Plex docker.
@@ -137,6 +143,9 @@ verify_valid_path_variables
 
 # Start backup message.
 echo_ts "[PLEX BACKUP STARTED]"
+
+# Send backup started notification to Unraid's Web GUI.
+if [[ $UNRAID_WEBGUI_START_MSG = true ]]; then send_start_msg_to_unraid_webgui; fi
 
 # Stop Plex Docker.
 if [[ $STOP_PLEX_DOCKER = true ]]; then stop_plex; fi
