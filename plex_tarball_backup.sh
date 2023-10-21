@@ -24,6 +24,11 @@ COMPLETE_TARFILE_NAME() { echo "[$(TIMESTAMP)] $TARFILE_TEXT.tar"; }  # OPTIONAL
 TAR_COMMAND() {  # OPTIONALLY customize the TAR command. Use "$TAR_FILE" for the tar file name. This command is ran from within the $PLEX_DIR directory.
     tar -cf "$TAR_FILE" "Media" "Metadata"
 }
+ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS=false  # OPTIONALLY abort the script from running if there are active sessions on the Plex server.
+PLEX_SERVER_URL_AND_PORT="http://192.168.1.1:32400"  # ONLY REQUIRED if using 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
+PLEX_TOKEN="xxxxxxxxxxxxxxxxxxxx"  # ONLY REQUIRED if using 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
+INCLUDE_PAUSED_SESSIONS=false  # Incluse paused Plex sessions if 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
+ALSO_ABORT_ON_FAILED_CONNECTION=false  # Also abort the script if the connection to the Plex server fails.
 
 #########################################################
 ################## END OF USER CONFIG ###################
@@ -31,6 +36,18 @@ TAR_COMMAND() {  # OPTIONALLY customize the TAR command. Use "$TAR_FILE" for the
 
 # Function to append timestamps on all script messages printed to the console.
 echo_ts() { local ms=${EPOCHREALTIME#*.}; printf "[%(%Y_%m_%d)T %(%H:%M:%S)T.${ms:0:3}] $@\\n"; }
+
+# Function to abort script if there are active users on the Plex server.
+abort_script_run_due_to_active_plex_sessions() {
+    response=$(curl -s --fail --connect-timeout 10 "${PLEX_SERVER_URL_AND_PORT}/status/sessions?X-Plex-Token=${PLEX_TOKEN}")
+    if [[ $? -ne 0 ]] && [[ $ALSO_ABORT_ON_FAILED_CONNECTION = true ]]; then
+        echo_ts "[ERROR] Could not connect to Plex server. Aborting Plex DB Backup."
+        exit 1
+    elif [[ $response == *'state="playing"'* ]] || ( [[ $INCLUDE_PAUSED_SESSIONS = true ]] && [[ $response == *'state="paused"'* ]] ); then
+        echo_ts "Active users on Plex server. Aborting Plex DB Backup."
+        exit 0
+    fi
+}
 
 # Function to check the existence of a directory.
 check_directory_existence() {
@@ -113,6 +130,9 @@ send_success_msg_to_unraid_webgui() {
 ###############################################
 ############# BACKUP BEGINS HERE ##############
 ###############################################
+
+# Abort script if there are active users on the Plex server.
+if [[ $ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS = true ]]; then abort_script_run_due_to_active_plex_sessions; fi
 
 # Check if BACKUP_DIR and PLEX_DIR exist.
 check_directory_existence "$BACKUP_DIR"
