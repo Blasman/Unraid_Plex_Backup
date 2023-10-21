@@ -51,10 +51,13 @@ abort_script_run_due_to_active_plex_sessions() {
 
 # Function to verify that "$BACKUP_DIR" and "$PLEX_DIR" are valid paths.
 verify_valid_path_variables() {
-    local dirs=("$BACKUP_DIR" "$PLEX_DIR")
-    for dir in "${dirs[@]}"; do
-        if [ ! -d "$dir" ]; then
-            echo "[ERROR] Directory not found: $dir"
+    local dir_vars=("BACKUP_DIR" "PLEX_DIR")
+    for dir in "${dir_vars[@]}"; do
+        local clean_dir="${!dir}"
+        clean_dir="${clean_dir%/}"  # Remove trailing slashes
+        eval "$dir=\"$clean_dir\""  # Update the variable with the cleaned path
+        if [ ! -d "$clean_dir" ]; then
+            echo "[ERROR] Directory not found: $clean_dir"
             exit 1
         fi
     done
