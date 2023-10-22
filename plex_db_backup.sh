@@ -65,6 +65,12 @@ verify_valid_path_variables() {
     done
 }
 
+# Function to start the script. Print start message and get starting time.
+start_script() {
+    script_start_time=$EPOCHREALTIME
+    echo_ts "[PLEX DB BACKUP STARTED]"
+}
+
 # Function to send backup start notification to Unraid's Web GUI.
 send_start_msg_to_unraid_webgui() {
     /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex DB Back Up Started."
@@ -126,9 +132,36 @@ delete_old_backups() {
     done
 }
 
+# Function to create a 'run_time' variable with a milliseconds value from two separate $EPOCHREALTIME style values.
+millisecond_run_timer() {
+    local start_time="$1" local end_time="$2"
+    local start_time_integer=${start_time/./}
+    local end_time_integer=${end_time/./}
+    local run_time=$((end_time_integer - start_time_integer))
+    local before_decimal="${run_time::-6}"  # Get value before decimal
+    local after_decimal="${run_time%???}"  # Get value after decimal
+    local trimmed_after_decimal="${after_decimal: -3}"
+    local hours=$((before_decimal / 3600))  # Calculate hours
+    local minutes=$((before_decimal % 3600 / 60))  # Calculate minutes
+    local seconds=$((before_decimal % 60))  # Calculate seconds
+    local formatted_before_decimal="" local formatted_seconds=""
+    if [ $hours -gt 0 ]; then formatted_before_decimal="${hours}h "; fi
+    if [ $minutes -gt 0 ]; then formatted_before_decimal="${formatted_before_decimal}${minutes}m "; fi
+    if [ $seconds -gt 0 ]; then formatted_seconds=$seconds; else formatted_seconds="0"; fi
+    formatted_before_decimal="${formatted_before_decimal}${formatted_seconds}"
+    run_time="$formatted_before_decimal."$trimmed_after_decimal"s"
+    echo "$run_time"
+}
+
+# Function to end the script. Print backup completed message with runtime.
+end_script() {
+    run_time=$(millisecond_run_timer $script_start_time $EPOCHREALTIME)
+    echo_ts "[PLEX DB BACKUP COMPLETE] Run Time: $run_time."
+}
+
 # Function to send backup success notification to Unraid's Web GUI.
 send_success_msg_to_unraid_webgui() {
-    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex DB Back Up Complete." -d "Successfully backed up files to '$BACKUP_PATH'."
+    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex DB Back Up Complete." -d "Run time: $run_time."
 }
 
 ###############################################
@@ -141,8 +174,8 @@ if [[ $ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS = true ]]; then abort_script_run
 # Verify that $BACKUP_DIR and $PLEX_DIR are valid paths.
 verify_valid_path_variables
 
-# Start backup message.
-echo_ts "[PLEX BACKUP STARTED]"
+# Start 'main' backup script processing. Print console message and get start time.
+start_script
 
 # Send backup started notification to Unraid's Web GUI.
 if [[ $UNRAID_WEBGUI_START_MSG = true ]]; then send_start_msg_to_unraid_webgui; fi
@@ -162,8 +195,8 @@ if [[ $PERMISSIONS =~ ^[0-9]{3,4}$ ]]; then set_permissions; fi
 # Delete old backups.
 if [[ $HOURS_TO_KEEP_BACKUPS_FOR =~ ^[0-9]+(\.[0-9]+)?$ ]]; then delete_old_backups; fi
 
-# Backup completed message.
-echo_ts "[PLEX BACKUP COMPLETE] Backed created at '$BACKUP_PATH'."
+# Backup completed message with runtime.
+end_script
 
 # Send backup completed notification to Unraid's Web GUI.
 if [[ $UNRAID_WEBGUI_SUCCESS_MSG = true ]]; then send_success_msg_to_unraid_webgui; fi
