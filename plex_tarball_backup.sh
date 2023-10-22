@@ -100,6 +100,12 @@ run_mover() {
     fi
 }
 
+# Function to start the script. Print start message and get starting time.
+start_script() {
+    script_start_time=$EPOCHREALTIME
+    echo_ts "[PLEX TARBALL BACKUP STARTED]"
+}
+
 # Function to send backup start notification to Unraid's Web GUI.
 send_start_msg_to_unraid_webgui() {
     /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex Tar Back Up Started."
@@ -138,9 +144,36 @@ set_permissions() {
     echo_ts "Successfully set permissions on tar file."
 }
 
+# Function to create a 'run_time' variable with a milliseconds value from two separate $EPOCHREALTIME style values.
+millisecond_run_timer() {
+    local start_time="$1" local end_time="$2"
+    local start_time_integer=${start_time/./}
+    local end_time_integer=${end_time/./}
+    local run_time=$((end_time_integer - start_time_integer))
+    local before_decimal="${run_time::-6}"  # Get value before decimal
+    local after_decimal="${run_time%???}"  # Get value after decimal
+    local trimmed_after_decimal="${after_decimal: -3}"
+    local hours=$((before_decimal / 3600))  # Calculate hours
+    local minutes=$((before_decimal % 3600 / 60))  # Calculate minutes
+    local seconds=$((before_decimal % 60))  # Calculate seconds
+    local formatted_before_decimal="" local formatted_seconds=""
+    if [ $hours -gt 0 ]; then formatted_before_decimal="${hours}h "; fi
+    if [ $minutes -gt 0 ]; then formatted_before_decimal="${formatted_before_decimal}${minutes}m "; fi
+    if [ $seconds -gt 0 ]; then formatted_seconds=$seconds; else formatted_seconds="0"; fi
+    formatted_before_decimal="${formatted_before_decimal}${formatted_seconds}"
+    run_time="$formatted_before_decimal."$trimmed_after_decimal"s"
+    echo "$run_time"
+}
+
+# Function to end the script. Print backup completed message with runtime.
+end_script() {
+    run_time=$(millisecond_run_timer $script_start_time $EPOCHREALTIME)
+    echo_ts "[PLEX TARBALL BACKUP COMPLETE] Run Time: $run_time."
+}
+
 # Function to send backup success notification to Unraid's Web GUI.
 send_success_msg_to_unraid_webgui() {
-    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex Tar Back Up Complete." -d "Successfully created tar file '$TAR_FILE'."
+    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex Tarball Back Up Complete." -d "Run time: $run_time."
 }
 
 ###############################################
@@ -159,8 +192,8 @@ if [[ $HOURS_TO_KEEP_BACKUPS_FOR =~ ^[0-9]+(\.[0-9]+)?$ ]]; then delete_old_back
 # Run mover before Backup.
 if [[ $RUN_MOVER_BEFORE_BACKUP = true ]]; then run_mover; fi
 
-# Start backup message.
-echo_ts "[PLEX TARBALL BACKUP STARTED]"
+# Start 'main' backup script processing. Print console message and get start time.
+start_script
 
 # Send backup started notification to Unraid's Web GUI.
 if [[ $UNRAID_WEBGUI_START_MSG = true ]]; then send_start_msg_to_unraid_webgui; fi
@@ -177,8 +210,8 @@ if [[ $STOP_PLEX_DOCKER = true ]]; then start_plex; fi
 # Set permissions for the tar file.
 if [[ $PERMISSIONS =~ ^[0-9]{3,4}$ ]]; then set_permissions; fi
 
-# Backup completed message.
-echo_ts "[PLEX TARBALL BACKUP COMPLETE] Backed created at '$TAR_FILE'."
+# Backup completed message with runtime.
+end_script
 
 # Send backup completed notification to Unraid's Web GUI.
 if [[ $UNRAID_WEBGUI_SUCCESS_MSG = true ]]; then send_success_msg_to_unraid_webgui; fi
