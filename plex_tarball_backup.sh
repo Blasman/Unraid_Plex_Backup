@@ -116,7 +116,7 @@ stop_plex() {
 create_tar_file() {
     # Navigate to $PLEX_DIR working directory to shorten the tar command.
     cd "$PLEX_DIR"
-    # Create sub-directory name with the custom timestamp.
+    # Create tar file name with the custom timestamp.
     TAR_FILE="$BACKUP_DIR/$(COMPLETE_TARFILE_NAME)"
     echo_ts "Creating tar file..."
     # Run the tar command.
