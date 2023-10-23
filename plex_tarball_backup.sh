@@ -127,7 +127,7 @@ start_backup() {
 
 # Function to send backup start notification to Unraid's Web GUI.
 send_start_msg_to_unraid_webgui() {
-    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex Tar Back Up Started."
+    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex Tarball Back Up Started."
 }
 
 # Function to stop Plex docker.
