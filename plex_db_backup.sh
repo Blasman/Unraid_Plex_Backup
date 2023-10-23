@@ -47,14 +47,14 @@ ms_run_timer() {
     local run_time=$((end_time_integer - start_time_integer))
     run_time=$(printf "%06d" $run_time)
     local before_decimal="${run_time::-6}"
-    local after_decimal="${run_time%???}"
-    local trimmed_after_decimal="${after_decimal: -3}"
+    local trimmed_run_time="${run_time%???}"
+    local after_decimal="${trimmed_run_time: -3}"
     local hours=$((before_decimal / 3600))
     local minutes=$((before_decimal % 3600 / 60))
     local seconds=$((before_decimal % 60))
     if [ $hours -gt 0 ]; then result="${hours}h "; fi
     if [ $minutes -gt 0 ]; then result="${result}${minutes}m "; fi
-    result="${result}${seconds}.${trimmed_after_decimal}s"
+    result="${result}${seconds}.${after_decimal}s"
     echo "$result"
 }
 
