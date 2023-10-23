@@ -134,23 +134,23 @@ delete_old_backups() {
 
 # Function to create a 'run_time' variable with a milliseconds value from two separate $EPOCHREALTIME style values.
 millisecond_run_timer() {
-    local start_time="$1" local end_time="$2"
+    local start_time="$1"; local end_time="$2"
     local start_time_integer=${start_time/./}
     local end_time_integer=${end_time/./}
     local run_time=$((end_time_integer - start_time_integer))
-    local before_decimal="${run_time::-6}"  # Get value before decimal
-    local after_decimal="${run_time%???}"  # Get value after decimal
+    local before_decimal="${run_time::-6}"
+    local after_decimal="${run_time%???}"
     local trimmed_after_decimal="${after_decimal: -3}"
-    local hours=$((before_decimal / 3600))  # Calculate hours
-    local minutes=$((before_decimal % 3600 / 60))  # Calculate minutes
-    local seconds=$((before_decimal % 60))  # Calculate seconds
-    local formatted_before_decimal="" local formatted_seconds=""
+    local hours=$((before_decimal / 3600))
+    local minutes=$((before_decimal % 3600 / 60))
+    local seconds=$((before_decimal % 60))
+    local formatted_before_decimal=""; local formatted_seconds=""; local formatted_run_time=""
     if [ $hours -gt 0 ]; then formatted_before_decimal="${hours}h "; fi
     if [ $minutes -gt 0 ]; then formatted_before_decimal="${formatted_before_decimal}${minutes}m "; fi
     if [ $seconds -gt 0 ]; then formatted_seconds=$seconds; else formatted_seconds="0"; fi
     formatted_before_decimal="${formatted_before_decimal}${formatted_seconds}"
-    run_time="$formatted_before_decimal."$trimmed_after_decimal"s"
-    echo "$run_time"
+    formatted_run_time="$formatted_before_decimal."$trimmed_after_decimal"s"
+    echo "$formatted_run_time"
 }
 
 # Function to end the script. Print backup completed message with runtime.
