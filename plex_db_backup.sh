@@ -139,17 +139,16 @@ millisecond_run_timer() {
     local end_time_integer=${end_time/./}
     local run_time=$((end_time_integer - start_time_integer))
     local before_decimal="${run_time::-6}"
-    local after_decimal="${run_time%???}"
-    local trimmed_after_decimal="${after_decimal: -3}"
+    local trimmed_integer="${run_time%???}"
+    local after_decimal="${trimmed_integer: -3}"
     local hours=$((before_decimal / 3600))
     local minutes=$((before_decimal % 3600 / 60))
     local seconds=$((before_decimal % 60))
-    local formatted_before_decimal=""; local formatted_seconds=""; local formatted_run_time=""
+    local formatted_before_decimal=""; local formatted_run_time=""
     if [ $hours -gt 0 ]; then formatted_before_decimal="${hours}h "; fi
     if [ $minutes -gt 0 ]; then formatted_before_decimal="${formatted_before_decimal}${minutes}m "; fi
-    if [ $seconds -gt 0 ]; then formatted_seconds=$seconds; else formatted_seconds="0"; fi
-    formatted_before_decimal="${formatted_before_decimal}${formatted_seconds}"
-    formatted_run_time="$formatted_before_decimal."$trimmed_after_decimal"s"
+    formatted_before_decimal="${formatted_before_decimal}${seconds}"
+    formatted_run_time="$formatted_before_decimal."$after_decimal"s"
     echo "$formatted_run_time"
 }
 
