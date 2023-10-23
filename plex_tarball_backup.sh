@@ -38,6 +38,25 @@ ALSO_ABORT_ON_FAILED_CONNECTION=false  # Also abort the script if the connection
 # Function to append timestamps on all script messages printed to the console.
 echo_ts() { local ms=${EPOCHREALTIME#*.}; printf "[%(%Y_%m_%d)T %(%H:%M:%S)T.${ms:0:3}] $@\\n"; }
 
+# Function to create a 'run timer' with milliseconds accuracy to 3 digits by subtracting one $EPOCHREALTIME value from another.
+ms_run_timer() {
+    local start_time="$1"; local end_time="$2"; local result=""
+    local start_time_integer=${start_time/./}
+    local end_time_integer=${end_time/./}
+    local run_time=$((end_time_integer - start_time_integer))
+    run_time=$(printf "%06d" $run_time)
+    local before_decimal="${run_time::-6}"
+    local after_decimal="${run_time%???}"
+    local trimmed_after_decimal="${after_decimal: -3}"
+    local hours=$((before_decimal / 3600))
+    local minutes=$((before_decimal % 3600 / 60))
+    local seconds=$((before_decimal % 60))
+    if [ $hours -gt 0 ]; then result="${hours}h "; fi
+    if [ $minutes -gt 0 ]; then result="${result}${minutes}m "; fi
+    result="${result}${seconds}.${trimmed_after_decimal}s"
+    echo "$result"
+}
+
 # Function to abort script if there are active users on the Plex server.
 abort_script_run_due_to_active_plex_sessions() {
     response=$(curl -s --fail --connect-timeout 10 "${PLEX_SERVER_URL_AND_PORT}/status/sessions?X-Plex-Token=${PLEX_TOKEN}")
@@ -120,14 +139,12 @@ stop_plex() {
 
 # Function to create the tar file.
 create_tar_file() {
-    # Navigate to $PLEX_DIR working directory to shorten the tar command.
-    cd "$PLEX_DIR"
-    # Create tar file name with the custom timestamp.
-    TAR_FILE="$BACKUP_DIR/$(COMPLETE_TARFILE_NAME)"
+    local create_tar_file_start_time=$EPOCHREALTIME
+    cd "$PLEX_DIR"  # Navigate to $PLEX_DIR working directory to shorten the tar command.
+    TAR_FILE="$BACKUP_DIR/$(COMPLETE_TARFILE_NAME)"  # Create tar file name with the custom timestamp.
     echo_ts "Creating tar file..."
-    # Run the tar command.
-    TAR_COMMAND
-    echo_ts "Tar file created."
+    TAR_COMMAND  # Run the tar command.
+    echo_ts "Tar file created in $(ms_run_timer $create_tar_file_start_time $EPOCHREALTIME)."
 }
 
 # Function to start Plex docker.
@@ -144,27 +161,9 @@ set_permissions() {
     echo_ts "Successfully set permissions on tar file."
 }
 
-# Function to create a 'run_time' variable with a milliseconds value by subtracting one $EPOCHREALTIME value from another.
-millisecond_run_timer() {
-    local start_time="$1"; local end_time="$2"; local result=""
-    local start_time_integer=${start_time/./}
-    local end_time_integer=${end_time/./}
-    local run_time=$((end_time_integer - start_time_integer))
-    local before_decimal="${run_time::-6}"
-    local trimmed_integer="${run_time%???}"
-    local after_decimal="${trimmed_integer: -3}"
-    local hours=$((before_decimal / 3600))
-    local minutes=$((before_decimal % 3600 / 60))
-    local seconds=$((before_decimal % 60))
-    if [ $hours -gt 0 ]; then result="${hours}h "; fi
-    if [ $minutes -gt 0 ]; then result="${result}${minutes}m "; fi
-    result="${result}${seconds}.${after_decimal}s"
-    echo "$result"
-}
-
 # Function to print backup completed message to console with the 'run_time' variable.
 complete_backup() {
-    run_time=$(millisecond_run_timer $script_start_time $EPOCHREALTIME)
+    run_time=$(ms_run_timer $script_start_time $EPOCHREALTIME)
     echo_ts "[PLEX TARBALL BACKUP COMPLETE] Run Time: $run_time."
 }
 
