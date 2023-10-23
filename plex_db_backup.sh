@@ -66,7 +66,7 @@ verify_valid_path_variables() {
 }
 
 # Function to record the "start time of backup" when 'run_time' is calculated at end of backup.
-backup_starts() {
+start_backup() {
     script_start_time=$EPOCHREALTIME
     echo_ts "[PLEX DB BACKUP STARTED]"
 }
@@ -154,7 +154,7 @@ millisecond_run_timer() {
 }
 
 # Function to print backup completed message to console with the 'run_time' variable.
-backup_stops() {
+complete_backup() {
     run_time=$(millisecond_run_timer $script_start_time $EPOCHREALTIME)
     echo_ts "[PLEX DB BACKUP COMPLETE] Run Time: $run_time."
 }
@@ -175,7 +175,7 @@ if [[ $ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS = true ]]; then abort_script_run
 verify_valid_path_variables
 
 # Print backup start message to console. This is consided the "start of the backup" when 'run_time' is calculated. 
-backup_starts
+start_backup
 
 # Send backup started notification to Unraid's Web GUI.
 if [[ $UNRAID_WEBGUI_START_MSG = true ]]; then send_start_msg_to_unraid_webgui; fi
@@ -196,7 +196,7 @@ if [[ $PERMISSIONS =~ ^[0-9]{3,4}$ ]]; then set_permissions; fi
 if [[ $HOURS_TO_KEEP_BACKUPS_FOR =~ ^[0-9]+(\.[0-9]+)?$ ]]; then delete_old_backups; fi
 
 # Print backup completed message to console with the 'run_time' for the backup.
-backup_stops
+complete_backup
 
 # Send backup completed notification to Unraid's Web GUI.
 if [[ $UNRAID_WEBGUI_SUCCESS_MSG = true ]]; then send_success_msg_to_unraid_webgui; fi
