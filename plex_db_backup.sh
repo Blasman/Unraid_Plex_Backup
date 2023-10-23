@@ -134,7 +134,7 @@ delete_old_backups() {
 
 # Function to create a 'run_time' variable with a milliseconds value by subtracting one $EPOCHREALTIME value from another.
 millisecond_run_timer() {
-    local start_time="$1"; local end_time="$2"; local formatted_run_time=""
+    local start_time="$1"; local end_time="$2"; local result=""
     local start_time_integer=${start_time/./}
     local end_time_integer=${end_time/./}
     local run_time=$((end_time_integer - start_time_integer))
@@ -144,11 +144,10 @@ millisecond_run_timer() {
     local hours=$((before_decimal / 3600))
     local minutes=$((before_decimal % 3600 / 60))
     local seconds=$((before_decimal % 60))
-    if [ $hours -gt 0 ]; then formatted_run_time="${hours}h "; fi
-    if [ $minutes -gt 0 ]; then formatted_run_time="${formatted_run_time}${minutes}m "; fi
-    formatted_run_time="${formatted_run_time}${seconds}"
-    formatted_run_time="$formatted_run_time."$after_decimal"s"
-    echo "$formatted_run_time"
+    if [ $hours -gt 0 ]; then result="${hours}h "; fi
+    if [ $minutes -gt 0 ]; then result="${result}${minutes}m "; fi
+    result="${result}${seconds}.${after_decimal}s"
+    echo "$result"
 }
 
 # Function to print backup completed message to console with the 'run_time' variable.
