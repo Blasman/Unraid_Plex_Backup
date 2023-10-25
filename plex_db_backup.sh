@@ -5,23 +5,24 @@
 # The files are placed in their own sub-directory (with a timestamp of the current time) within the specified backup directory.
 # You can edit the default copy function in the config below to specify different folders/files to backup.
 
-#########################################################
-################### USER CONFIG BELOW ###################
-#########################################################
-
+################################################################################
+# ---------------------- USER CONFIG (REQUIRED TO EDIT) ---------------------- #
+################################################################################
 PLEX_DIR="/mnt/primary/appdata/plex/Library/Application Support/Plex Media Server"  # "Plex Media Server" folder location *within* the plex appdata folder.
 BACKUP_DIR="/mnt/user/Backup/Plex DB Backups"  # Backup folder location.
 HOURS_TO_KEEP_BACKUPS_FOR="95"  # Delete backups older than this many hours. Comment out or delete to disable deletion of old backups.
 STOP_PLEX_DOCKER=true  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. Comment out or delete to disable.
 PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
-PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the backup sub-directory and files. Comment out or delete to disable.
+################################################################################
+# --------------- OPTIONAL USER CONFIG (NOT REQUIRED TO EDIT) ---------------- #
+################################################################################
 UNRAID_WEBGUI_START_MSG=true  # Send backup start message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
 UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
-#----------- OPTIONAL ADVANCED CONFIG BELOW ------------#
+PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the backup sub-directory and files. Comment out or delete to disable.
 SUBDIR_TEXT="Plex DB Backup"  # OPTIONALLY customize the text for the backup sub-directory name. As a precaution, the script only deletes old backups that match this pattern.
 TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # OPTIONALLY customize TIMESTAMP for backup sub-directory name.
 COMPLETE_SUBDIR_NAME() { echo "[$(TIMESTAMP)] $SUBDIR_TEXT"; }  # OPTIONALLY customize the complete backup sub-directory name with the TIMESTAMP and SUBDIR_TEXT.
-BACKUP_COMMAND() {  # OPTIONALLY customize the function that copies the files.
+BACKUP_COMMAND() {  # OPTIONALLY customize the function that copies the files. Use "$backup_path" to specify the full backup path.
     cp "$PLEX_DIR/Preferences.xml" "$backup_path/Preferences.xml"
     cp "$PLEX_DIR/Plug-in Support/Databases/com.plexapp.plugins.library.db" "$backup_path/com.plexapp.plugins.library.db"
     cp "$PLEX_DIR/Plug-in Support/Databases/com.plexapp.plugins.library.blobs.db" "$backup_path/com.plexapp.plugins.library.blobs.db"
@@ -31,10 +32,9 @@ PLEX_SERVER_URL_AND_PORT="http://192.168.1.1:32400"  # ONLY REQUIRED if using 'A
 PLEX_TOKEN="xxxxxxxxxxxxxxxxxxxx"  # ONLY REQUIRED if using 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
 INCLUDE_PAUSED_SESSIONS=false  # Include paused Plex sessions if 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
 ALSO_ABORT_ON_FAILED_CONNECTION=false  # Also abort the script if the connection to the Plex server fails when 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
-
-#########################################################
-################## END OF USER CONFIG ###################
-#########################################################
+################################################################################
+# ---------------------------- END OF USER CONFIG ---------------------------- #
+################################################################################
 
 # Function to append timestamps on all script messages printed to the console.
 echo_ts() { local ms=${EPOCHREALTIME#*.}; printf "[%(%Y_%m_%d)T %(%H:%M:%S)T.${ms:0:3}] $@\\n"; }
