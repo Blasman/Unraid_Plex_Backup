@@ -21,9 +21,9 @@ UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web 
 #----------- OPTIONAL ADVANCED CONFIG BELOW ------------#
 TARFILE_TEXT="Plex Metadata Backup"  # OPTIONALLY customize the text for the backup tar file. As a precaution, the script only deletes old backups that match this pattern.
 TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # OPTIONALLY customize TIMESTAMP for the tar filename.
-COMPLETE_TARFILE_NAME() { echo "[$(TIMESTAMP)] $TARFILE_TEXT.tar"; }  # OPTIONALLY customize the complete tar file name (adding extension) with the TIMESTAMP and TARFILE_TEXT.
-TAR_COMMAND() {  # OPTIONALLY customize the TAR command. Use "$TAR_FILE" for the tar file name. This command is ran from within the $PLEX_DIR directory.
-    tar -cf "$TAR_FILE" "Media" "Metadata"
+COMPLETE_TAR_FILENAME() { echo "[$(TIMESTAMP)] $TARFILE_TEXT.tar"; }  # OPTIONALLY customize the complete tar file name (adding extension) with the TIMESTAMP and TARFILE_TEXT.
+TAR_COMMAND() {  # OPTIONALLY customize the TAR command. Use "$tar_file" for the tar file name. This command is ran from within the $PLEX_DIR directory.
+    tar -cf "$tar_file" "Media" "Metadata"
 }
 ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS=false  # OPTIONALLY abort the script from running if there are active sessions on the Plex server.
 PLEX_SERVER_URL_AND_PORT="http://192.168.1.1:32400"  # ONLY REQUIRED if using 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
@@ -141,10 +141,12 @@ stop_plex() {
 create_tar_file() {
     local create_tar_file_start_time=$EPOCHREALTIME
     cd "$PLEX_DIR"  # Navigate to $PLEX_DIR working directory to shorten the tar command.
-    TAR_FILE="$BACKUP_DIR/$(COMPLETE_TARFILE_NAME)"  # Create tar file name with the custom timestamp.
-    echo_ts "Creating tar file..."
-    TAR_COMMAND  # Run the tar command.
-    echo_ts "Tar file created in $(ms_run_timer $create_tar_file_start_time $EPOCHREALTIME)."
+    complete_tar_filename=$(COMPLETE_TAR_FILENAME)
+    tar_file="$BACKUP_DIR/$complete_tar_filename"
+    echo_ts "Creating file: '$tar_file'"
+    TAR_COMMAND
+    tar_filesize=$(du -hs "$tar_file" | awk '{print $1}')
+    echo_ts "Created $tar_filesize file in $(ms_run_timer $create_tar_file_start_time $EPOCHREALTIME)."
 }
 
 # Function to start Plex docker.
@@ -156,20 +158,20 @@ start_plex() {
 
 # Function to set permissions on the tar file.
 set_permissions() {
-    echo_ts "Running 'chmod $PERMISSIONS' on tar file..."
-    chmod $PERMISSIONS "$TAR_FILE"
-    echo_ts "Successfully set permissions on tar file."
+    echo_ts "Running 'chmod $PERMISSIONS' on file..."
+    chmod $PERMISSIONS "$tar_file"
+    echo_ts "Successfully set permissions on file."
 }
 
 # Function to print backup completed message to console with the 'run_time' variable.
 complete_backup() {
     run_time=$(ms_run_timer $script_start_time $EPOCHREALTIME)
-    echo_ts "[PLEX TARBALL BACKUP COMPLETE] Run Time: $run_time."
+    echo_ts "[PLEX TARBALL BACKUP COMPLETE] Run Time: $run_time. Filesize: $tar_filesize."
 }
 
 # Function to send backup success notification to Unraid's Web GUI.
 send_success_msg_to_unraid_webgui() {
-    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex Tarball Back Up Complete." -d "Run time: $run_time."
+    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex Tarball Back Up Complete." -d "Run time: $run_time. Filesize: $tar_filesize."
 }
 
 ###############################################
