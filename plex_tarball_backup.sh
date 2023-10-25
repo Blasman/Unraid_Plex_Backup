@@ -141,8 +141,7 @@ stop_plex() {
 create_tar_file() {
     local create_tar_file_start_time=$EPOCHREALTIME
     cd "$PLEX_DIR"  # Navigate to $PLEX_DIR working directory to shorten the tar command.
-    complete_tar_filename=$(COMPLETE_TAR_FILENAME)
-    tar_file="$BACKUP_DIR/$complete_tar_filename"
+    tar_file="$BACKUP_DIR/$(COMPLETE_TAR_FILENAME)"
     echo_ts "Creating file: '$tar_file'"
     TAR_COMMAND
     tar_filesize=$(du -hs "$tar_file" | awk '{print $1}')
