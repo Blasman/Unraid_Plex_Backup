@@ -105,8 +105,7 @@ stop_plex() {
 # Function to back up the files.
 backup_files() {
     local backup_files_start_time=$EPOCHREALTIME
-    complete_subdir_name=$(COMPLETE_SUBDIR_NAME)
-    backup_path="$BACKUP_DIR/$complete_subdir_name"
+    backup_path="$BACKUP_DIR/$(COMPLETE_SUBDIR_NAME)"
     echo_ts "Copying files to: '$backup_path'"
     mkdir -p "$backup_path"
     BACKUP_COMMAND
