@@ -4,21 +4,22 @@
 # By default, this script will backup the "Media" and "Metadata" folders of Plex to a tar file with a timestamp of the current time.
 # You can edit the tar command used in the config below. (ie. specify different folders/files to backup, use compression, etc.)
 
-#########################################################
-################### USER CONFIG BELOW ###################
-#########################################################
-
+################################################################################
+# ---------------------- USER CONFIG (REQUIRED TO EDIT) ---------------------- #
+################################################################################
 PLEX_DIR="/mnt/primary/appdata/plex/Library/Application Support/Plex Media Server"  # "Plex Media Server" folder location *within* the plex appdata folder.
 BACKUP_DIR="/mnt/user/Backup/Plex Metadata Backups"  # Backup folder location.
 HOURS_TO_KEEP_BACKUPS_FOR="324"  # Delete backups older than this many hours. Comment out or delete to disable.
 STOP_PLEX_DOCKER=false  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. Comment out or delete to disable.
 PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
-PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the final tar file. Comment out or delete to disable.
-RUN_MOVER_BEFORE_BACKUP=true  # Run Unraid's 'mover' BEFORE backing up. Set to "true" (without quotes) to use. Comment out or delete to disable.
-RUN_MOVER_AFTER_BACKUP=true  # Run Unraid's 'mover' AFTER backing up. Set to "true" (without quotes) to use. Comment out or delete to disable.
+################################################################################
+# --------------- OPTIONAL USER CONFIG (NOT REQUIRED TO EDIT) ---------------- #
+################################################################################
+RUN_MOVER_BEFORE_BACKUP=false  # Run Unraid's 'mover' BEFORE backing up. Set to "true" (without quotes) to use. Comment out or delete to disable.
+RUN_MOVER_AFTER_BACKUP=false  # Run Unraid's 'mover' AFTER backing up. Set to "true" (without quotes) to use. Comment out or delete to disable.
 UNRAID_WEBGUI_START_MSG=true  # Send backup start message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
 UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
-#----------- OPTIONAL ADVANCED CONFIG BELOW ------------#
+PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the final tar file. Comment out or delete to disable.
 TARFILE_TEXT="Plex Metadata Backup"  # OPTIONALLY customize the text for the backup tar file. As a precaution, the script only deletes old backups that match this pattern.
 TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # OPTIONALLY customize TIMESTAMP for the tar filename.
 COMPLETE_TAR_FILENAME() { echo "[$(TIMESTAMP)] $TARFILE_TEXT.tar"; }  # OPTIONALLY customize the complete tar file name (adding extension) with the TIMESTAMP and TARFILE_TEXT.
@@ -30,10 +31,9 @@ PLEX_SERVER_URL_AND_PORT="http://192.168.1.1:32400"  # ONLY REQUIRED if using 'A
 PLEX_TOKEN="xxxxxxxxxxxxxxxxxxxx"  # ONLY REQUIRED if using 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
 INCLUDE_PAUSED_SESSIONS=false  # Include paused Plex sessions if 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
 ALSO_ABORT_ON_FAILED_CONNECTION=false  # Also abort the script if the connection to the Plex server fails when 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
-
-#########################################################
-################## END OF USER CONFIG ###################
-#########################################################
+################################################################################
+# ---------------------------- END OF USER CONFIG ---------------------------- #
+################################################################################
 
 # Function to append timestamps on all script messages printed to the console.
 echo_ts() { local ms=${EPOCHREALTIME#*.}; printf "[%(%Y_%m_%d)T %(%H:%M:%S)T.${ms:0:3}] $@\\n"; }
