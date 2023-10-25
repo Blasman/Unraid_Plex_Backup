@@ -35,24 +35,20 @@ ALSO_ABORT_ON_FAILED_CONNECTION=false  # Also abort the script if the connection
 # ---------------------------- END OF USER CONFIG ---------------------------- #
 ################################################################################
 
-# Function to append timestamps on all script messages printed to the console.
-echo_ts() { local ms=${EPOCHREALTIME#*.}; printf "[%(%Y_%m_%d)T %(%H:%M:%S)T.${ms:0:3}] $@\\n"; }
+# Function to append timestamps with milliseconds on all script messages printed to the console.
+echo_ts() { local ms=${EPOCHREALTIME#*.}; printf "[%(%Y_%m_%d)T %(%H:%M:%S)T.${ms::3}] $@\\n"; }
 
 # Function to create a 'run timer' with milliseconds accuracy by subtracting one $EPOCHREALTIME value from another.
 ms_run_timer() {
-    local start_time="$1"; local end_time="$2"; local result=""
-    local start_time_integer=${start_time/./}
-    local end_time_integer=${end_time/./}
-    local run_time=$((end_time_integer - start_time_integer))
-    run_time=$(printf "%06d" $run_time)
+    local start_time="$1"; local end_time="$2"
+    local run_time=$(printf "%06d" $((${end_time/./} - ${start_time/./})))
     local before_decimal="${run_time::-6}"
     local hours=$((before_decimal / 3600))
     local minutes=$((before_decimal % 3600 / 60))
     local seconds=$((before_decimal % 60))
-    if [[ $hours -gt 0 ]]; then result="${hours}h ${minutes}m ${seconds}s";
-    elif [[ $minutes -gt 0 ]]; then result="${minutes}m ${seconds}s";
-    else result="${seconds}.${run_time: -6:3}s"; fi  # Only display milliseconds if result is under one minute
-    echo "$result"
+    if [[ $hours -gt 0 ]]; then echo "${hours}h ${minutes}m ${seconds}s";
+    elif [[ $minutes -gt 0 ]]; then echo "${minutes}m ${seconds}s";
+    else echo "${seconds}.${run_time: -6:3}s"; fi  # Only display milliseconds if result is under one minute
 }
 
 # Function to abort script if there are active users on the Plex server.
