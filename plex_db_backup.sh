@@ -39,7 +39,7 @@ ALSO_ABORT_ON_FAILED_CONNECTION=false  # Also abort the script if the connection
 # Function to append timestamps on all script messages printed to the console.
 echo_ts() { local ms=${EPOCHREALTIME#*.}; printf "[%(%Y_%m_%d)T %(%H:%M:%S)T.${ms:0:3}] $@\\n"; }
 
-# Function to create a 'run timer' with milliseconds accuracy to 3 digits by subtracting one $EPOCHREALTIME value from another.
+# Function to create a 'run timer' with milliseconds accuracy by subtracting one $EPOCHREALTIME value from another.
 ms_run_timer() {
     local start_time="$1"; local end_time="$2"; local result=""
     local start_time_integer=${start_time/./}
@@ -47,14 +47,12 @@ ms_run_timer() {
     local run_time=$((end_time_integer - start_time_integer))
     run_time=$(printf "%06d" $run_time)
     local before_decimal="${run_time::-6}"
-    local trimmed_run_time="${run_time%???}"
-    local after_decimal="${trimmed_run_time: -3}"
     local hours=$((before_decimal / 3600))
     local minutes=$((before_decimal % 3600 / 60))
     local seconds=$((before_decimal % 60))
-    if [ $hours -gt 0 ]; then result="${hours}h "; fi
-    if [ $minutes -gt 0 ]; then result="${result}${minutes}m "; fi
-    result="${result}${seconds}.${after_decimal}s"
+    if [[ $hours -gt 0 ]]; then result="${hours}h ${minutes}m ${seconds}s";
+    elif [[ $minutes -gt 0 ]]; then result="${minutes}m ${seconds}s";
+    else result="${seconds}.${run_time: -6:3}s"; fi  # Only display milliseconds if result is under one minute
     echo "$result"
 }
 
