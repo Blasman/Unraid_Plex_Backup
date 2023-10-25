@@ -37,7 +37,7 @@ ALSO_ABORT_ON_FAILED_CONNECTION=false  # Also abort the script if the connection
 ################################################################################
 
 # Function to append timestamps with milliseconds on all script messages printed to the console.
-echo_ts() { local ms=${EPOCHREALTIME#*.}; printf "[%(%Y_%m_%d)T %(%H:%M:%S)T.${ms::3}] $@\\n"; }
+echo_ts() { printf "[%(%Y_%m_%d)T %(%H:%M:%S)T.${EPOCHREALTIME: -6:3}] $@\\n"; }
 
 # Function to calculate a 'run timer' with precision accuracy as quickly as possible by subtracting one $EPOCHREALTIME value from another.
 run_timer() {  # If result is < 10 seconds, then 4 digits after decimal. Else If result is < 60 seconds, then 3 digits after decimal.
