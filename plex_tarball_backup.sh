@@ -38,18 +38,14 @@ ALSO_ABORT_ON_FAILED_CONNECTION=false  # Also abort the script if the connection
 # Function to append timestamps with milliseconds on all script messages printed to the console.
 echo_ts() { local ms=${EPOCHREALTIME#*.}; printf "[%(%Y_%m_%d)T %(%H:%M:%S)T.${ms::3}] $@\\n"; }
 
-# Function to create a 'run timer' with milliseconds accuracy by subtracting one $EPOCHREALTIME value from another.
-ms_run_timer() {
-    local start_time="$1"; local end_time="$2"
-    local run_time=$(printf "%06d" $((${end_time/./} - ${start_time/./})))
-    local before_decimal="${run_time::-6}"
-    local hours=$((before_decimal / 3600))
-    local minutes=$((before_decimal % 3600 / 60))
-    local seconds=$((before_decimal % 60))
-    if [[ $hours -gt 0 ]]; then echo "${hours}h ${minutes}m ${seconds}s";
-    elif [[ $minutes -gt 0 ]]; then echo "${minutes}m ${seconds}s";
-    else echo "${seconds}.${run_time: -6:3}s"; fi  # Only display milliseconds if result is under one minute
-}
+# Function to calculate a 'run timer' with precision accuracy as quickly as possible by subtracting one $EPOCHREALTIME value from another.
+run_timer() {  # If result is < 10 seconds, then 4 digits after decimal. Else If result is < 60 seconds, then 3 digits after decimal.
+    local start_time="$1"; local end_time="$2"; local run_time=$((${end_time/./} - ${start_time/./}))
+    if [[ $run_time -lt 10000000 ]]; then printf -v run_time "%07d" $run_time; echo "${run_time:0:1}.${run_time: -6:4}s";
+    elif [[ $run_time -lt 60000000 ]]; then printf -v run_time "%08d" $run_time; echo "${run_time:0:2}.${run_time: -6:3}s";
+    elif [[ $run_time -lt 3600000000 ]]; then echo "$((run_time % 3600000000 / 60000000))m ${run_time: -8:2}s";
+    else echo "$((run_time / 3600000000))h $((run_time % 3600000000 / 60000000))m ${run_time: -8:2}s"; fi
+}  # Example Usage: echo "Completed in $(run_timer $start_time $EPOCHREALTIME)."
 
 # Function to abort script if there are active users on the Plex server.
 abort_script_run_due_to_active_plex_sessions() {
@@ -139,7 +135,7 @@ create_tarfile() {
     echo_ts "Creating file: '$tarfile_complete_path'"
     TAR_COMMAND
     tarfile_filesize=$(du -hs "$tarfile_complete_path" | awk '{print $1}')
-    echo_ts "Created $tarfile_filesize file in $(ms_run_timer $create_tarfile_start_time $EPOCHREALTIME)."
+    echo_ts "Created $tarfile_filesize file in $(run_timer $create_tarfile_start_time $EPOCHREALTIME)."
 }
 
 # Function to start Plex docker.
@@ -158,7 +154,7 @@ set_permissions() {
 
 # Function to print backup completed message to console with the 'run_time' variable.
 complete_backup() {
-    run_time=$(ms_run_timer $script_start_time $EPOCHREALTIME)
+    run_time=$(run_timer $script_start_time $EPOCHREALTIME)
     echo_ts "[PLEX TARBALL BACKUP COMPLETE] Run Time: $run_time. Filesize: $tarfile_filesize."
 }
 
