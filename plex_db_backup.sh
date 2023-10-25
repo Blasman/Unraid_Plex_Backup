@@ -22,9 +22,9 @@ SUBDIR_TEXT="Plex DB Backup"  # OPTIONALLY customize the text for the backup sub
 TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # OPTIONALLY customize TIMESTAMP for backup sub-directory name.
 COMPLETE_SUBDIR_NAME() { echo "[$(TIMESTAMP)] $SUBDIR_TEXT"; }  # OPTIONALLY customize the complete backup sub-directory name with the TIMESTAMP and SUBDIR_TEXT.
 BACKUP_COMMAND() {  # OPTIONALLY customize the function that copies the files.
-    cp "$PLEX_DIR/Preferences.xml" "$BACKUP_PATH/Preferences.xml"
-    cp "$PLEX_DIR/Plug-in Support/Databases/com.plexapp.plugins.library.db" "$BACKUP_PATH/com.plexapp.plugins.library.db"
-    cp "$PLEX_DIR/Plug-in Support/Databases/com.plexapp.plugins.library.blobs.db" "$BACKUP_PATH/com.plexapp.plugins.library.blobs.db"
+    cp "$PLEX_DIR/Preferences.xml" "$backup_path/Preferences.xml"
+    cp "$PLEX_DIR/Plug-in Support/Databases/com.plexapp.plugins.library.db" "$backup_path/com.plexapp.plugins.library.db"
+    cp "$PLEX_DIR/Plug-in Support/Databases/com.plexapp.plugins.library.blobs.db" "$backup_path/com.plexapp.plugins.library.blobs.db"
 }
 ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS=false  # OPTIONALLY abort the script from running if there are active sessions on the Plex server.
 PLEX_SERVER_URL_AND_PORT="http://192.168.1.1:32400"  # ONLY REQUIRED if using 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
@@ -105,11 +105,13 @@ stop_plex() {
 # Function to back up the files.
 backup_files() {
     local backup_files_start_time=$EPOCHREALTIME
-    echo_ts "Copying Files..."
-    BACKUP_PATH="$BACKUP_DIR/$(COMPLETE_SUBDIR_NAME)"  # Create sub-directory name with the custom timestamp.
-    mkdir -p "$BACKUP_PATH"  # Create the backup sub-directory.
-    BACKUP_COMMAND  # Run the backup command.
-    echo_ts "Files copied in $(ms_run_timer $backup_files_start_time $EPOCHREALTIME)."
+    complete_subdir_name=$(COMPLETE_SUBDIR_NAME)
+    backup_path="$BACKUP_DIR/$complete_subdir_name"
+    echo_ts "Copying files to: '$backup_path'"
+    mkdir -p "$backup_path"
+    BACKUP_COMMAND
+    backup_path_filesize=$(du -hs "$backup_path" | awk '{print $1}')
+    echo_ts "Copied $backup_path_filesize of files in $(ms_run_timer $backup_files_start_time $EPOCHREALTIME). "
 }
 
 # Function to start Plex docker.
@@ -122,7 +124,7 @@ start_plex() {
 # Function to set permissions on the backup sub-directory.
 set_permissions() {
     echo_ts "Running 'chmod -R $PERMISSIONS' on backup sub-directory..."
-    chmod -R $PERMISSIONS "$BACKUP_PATH"
+    chmod -R $PERMISSIONS "$backup_path"
     echo_ts "Successfully set permissions on backup sub-directory."
 }
 
@@ -152,12 +154,12 @@ delete_old_backups() {
 # Function to print backup completed message to console with the 'run_time' variable.
 complete_backup() {
     run_time=$(ms_run_timer $script_start_time $EPOCHREALTIME)
-    echo_ts "[PLEX DB BACKUP COMPLETE] Run Time: $run_time."
+    echo_ts "[PLEX DB BACKUP COMPLETE] Run Time: $run_time. Folder size: $backup_path_filesize."
 }
 
 # Function to send backup success notification to Unraid's Web GUI.
 send_success_msg_to_unraid_webgui() {
-    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex DB Back Up Complete." -d "Run time: $run_time."
+    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex DB Back Up Complete." -d "Run time: $run_time. Folder size: $backup_path_filesize"
 }
 
 ###############################################
