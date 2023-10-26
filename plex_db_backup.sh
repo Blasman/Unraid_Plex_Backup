@@ -10,15 +10,15 @@
 ################################################################################
 PLEX_DIR="/mnt/primary/appdata/plex/Library/Application Support/Plex Media Server"  # FULL PATH to /Plex Media Server/ folder *within* the plex appdata folder.
 BACKUP_DIR="/mnt/user/Backup/Plex DB Backups"  # Backup folder location.
-HOURS_TO_KEEP_BACKUPS_FOR="95"  # Delete backups older than this many hours. Comment out or delete to disable deletion of old backups.
+HOURS_TO_KEEP_BACKUPS_FOR="95"  # Delete backups older than this many hours. (you may also comment out or delete to disable)
 PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
 ################################################################################
 # --------------- OPTIONAL USER CONFIG (NOT REQUIRED TO EDIT) ---------------- #
 ################################################################################
-STOP_PLEX_DOCKER=true  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. Comment out or delete to disable.
-UNRAID_WEBGUI_START_MSG=true  # Send backup start message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
-UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
-PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the backup sub-directory and files. Comment out or delete to disable.
+STOP_PLEX_DOCKER=true  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. (you may also comment out or delete to disable)
+UNRAID_WEBGUI_START_MSG=true  # Send backup start message to the Unraid Web GUI. Set to "true" (without quotes) to use. (you may also comment out or delete to disable)
+UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to "true" (without quotes) to use. (you may also comment out or delete to disable)
+PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the backup sub-directory and files. (you may also comment out or delete to disable)
 SUBDIR_TEXT="Plex DB Backup"  # OPTIONALLY customize the text for the backup sub-directory name. As a precaution, the script only deletes old backups that match this pattern.
 TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # OPTIONALLY customize TIMESTAMP for backup sub-directory name.
 COMPLETE_SUBDIR_NAME() { echo "[$(TIMESTAMP)] $SUBDIR_TEXT"; }  # OPTIONALLY customize the complete backup sub-directory name with the TIMESTAMP and SUBDIR_TEXT.
@@ -27,11 +27,16 @@ BACKUP_COMMAND() {  # OPTIONALLY customize the function that copies the files. U
     cp "$PLEX_DIR/Plug-in Support/Databases/com.plexapp.plugins.library.db" "$backup_path/com.plexapp.plugins.library.db"
     cp "$PLEX_DIR/Plug-in Support/Databases/com.plexapp.plugins.library.blobs.db" "$backup_path/com.plexapp.plugins.library.blobs.db"
 }
+# --------- RUN TARBALL BACKUP SCRIPT IMMEDIATELY AFTER THIS SCRIPT ---------- #  This provides an *ALTERNATIVE* to having two separate cron schedules for each script.
+RUN_TARBALL_BACKUP_UPON_COMPLETION=false  # Set to 'true' (without quotes) to run the Tarball backup script in Unraid's user-scripts immediately after this script is done processing.
+DAYS_TO_CHAIN_TARBALL_SCRIPT_ON="1 4"  # Days of the week to trigger the Tarball backup script on (separated by spaces). Same as would be in cron (most systems: 0 = Sunday, 6 = Saturday).
+NAME_OF_TARBALL_SCRIPT="Plex Metadata Backup"  # Name of the Tarball backup script in Unraid's user-scripts. (click on cogwheel, will be BASENAME dir. ie last dir of: '/boot/config/plugins/user.scripts/scripts/Plex Metadata Backup')
+# ---------------- ABORT SCRIPT IF ACTIVE PLEX USER SESSIONS ----------------- #
 ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS=false  # OPTIONALLY abort the script from running if there are active sessions on the Plex server.
 PLEX_SERVER_URL_AND_PORT="http://192.168.1.1:32400"  # ONLY REQUIRED if using 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
 PLEX_TOKEN="xxxxxxxxxxxxxxxxxxxx"  # ONLY REQUIRED if using 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
-INCLUDE_PAUSED_SESSIONS=false  # Include paused Plex sessions if 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
-ALSO_ABORT_ON_FAILED_CONNECTION=false  # Also abort the script if the connection to the Plex server fails when 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
+INCLUDE_PAUSED_SESSIONS=false  # Include paused Plex sessions as active users.
+ALSO_ABORT_ON_FAILED_CONNECTION=false  # Also abort the script if the connection to the Plex server fails.
 ################################################################################
 # ---------------------------- END OF USER CONFIG ---------------------------- #
 ################################################################################
@@ -73,6 +78,9 @@ verify_valid_path_variables() {
             exit 1
         fi
     done
+    if [[ $RUN_TARBALL_BACKUP_UPON_COMPLETION = true ]] && [[ ! -f "/boot/config/plugins/user.scripts/scripts/$NAME_OF_TARBALL_SCRIPT/script" ]]; then
+        echo_ts "[WARNING] COULD NOT FIND '$NAME_OF_TARBALL_SCRIPT' SCRIPT IN UNRAID USER-SCRIPTS! CANNOT RUN TARBALL BACKUP AFTER SCRIPT COMPLETION!"
+    fi
 }
 
 # Function to record the "start time of backup" when 'run_time' is calculated at end of backup.
@@ -152,12 +160,23 @@ send_success_msg_to_unraid_webgui() {
     /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex DB Back Up Complete." -d "Run time: $run_time. Folder size: $backup_path_filesize"
 }
 
+# Function to run Plex's tarball backup once script is completed.
+run_plex_tarball_backup() {
+    if [[ -f "/boot/config/plugins/user.scripts/scripts/$NAME_OF_TARBALL_SCRIPT/script" ]]; then
+        if [[ "$DAYS_TO_CHAIN_TARBALL_SCRIPT_ON" =~ "$(date +%w)" ]]; then
+            bash "/boot/config/plugins/user.scripts/scripts/$NAME_OF_TARBALL_SCRIPT/script"
+        fi
+    else
+        echo_ts "[ERROR] Could not find '$NAME_OF_TARBALL_SCRIPT' in Unraid's user-scripts."
+    fi
+}
+
 ###############################################
 ############# BACKUP BEGINS HERE ##############
 ###############################################
 
 # Abort script if there are active users on the Plex server.
-if [[ $ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS = true ]]; then abort_script_run_due_to_active_plex_sessions; fi
+if [[ $ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS == true ]]; then abort_script_run_due_to_active_plex_sessions; fi
 
 # Verify that $BACKUP_DIR and $PLEX_DIR are valid paths.
 verify_valid_path_variables
@@ -166,16 +185,16 @@ verify_valid_path_variables
 start_backup
 
 # Send backup started notification to Unraid's Web GUI.
-if [[ $UNRAID_WEBGUI_START_MSG = true ]]; then send_start_msg_to_unraid_webgui; fi
+if [[ $UNRAID_WEBGUI_START_MSG == true ]]; then send_start_msg_to_unraid_webgui; fi
 
 # Stop Plex Docker.
-if [[ $STOP_PLEX_DOCKER = true ]]; then stop_plex; fi
+if [[ $STOP_PLEX_DOCKER == true ]]; then stop_plex; fi
 
 # Copy the files from Plex to the backup sub-directory.
 backup_files
 
 # Start Plex Docker before doing anything else.
-if [[ $STOP_PLEX_DOCKER = true ]]; then start_plex; fi
+if [[ $STOP_PLEX_DOCKER == true ]]; then start_plex; fi
 
 # Set permissions for the backup directory and its contents.
 if [[ $PERMISSIONS =~ ^[0-9]{3,4}$ ]]; then set_permissions; fi
@@ -187,7 +206,10 @@ if [[ $HOURS_TO_KEEP_BACKUPS_FOR =~ ^[0-9]+(\.[0-9]+)?$ ]]; then delete_old_back
 complete_backup
 
 # Send backup completed notification to Unraid's Web GUI.
-if [[ $UNRAID_WEBGUI_SUCCESS_MSG = true ]]; then send_success_msg_to_unraid_webgui; fi
+if [[ $UNRAID_WEBGUI_SUCCESS_MSG == true ]]; then send_success_msg_to_unraid_webgui; fi
+
+# Run Tarball Backup immediately after script completion.
+if [[ $RUN_TARBALL_BACKUP_UPON_COMPLETION == true ]]; then run_plex_tarball_backup; fi
 
 # Exit with success.
 exit 0
