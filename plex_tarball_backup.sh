@@ -40,7 +40,7 @@ echo_ts() { printf "[%(%Y_%m_%d)T %(%H:%M:%S)T.${EPOCHREALTIME: -6:3}] $@\\n"; }
 
 # Function to calculate a 'run timer' with precision accuracy as quickly as possible by subtracting one $EPOCHREALTIME value from another.
 run_timer() {  # If result is < 10 seconds, then 4 digits after decimal. Else If result is < 60 seconds, then 3 digits after decimal.
-    local start_time="$1"; local end_time="$2"; local run_time=$((${end_time/./} - ${start_time/./}))
+    local run_time=$((${2/./} - ${1/./}))
     if [[ $run_time -lt 10000000 ]]; then printf -v run_time "%07d" $run_time; echo "${run_time:0:1}.${run_time: -6:4}s";
     elif [[ $run_time -lt 60000000 ]]; then echo "${run_time:0:2}.${run_time: -6:3}s";
     elif [[ $run_time -lt 3600000000 ]]; then echo "$((run_time % 3600000000 / 60000000))m ${run_time: -8:2}s";
