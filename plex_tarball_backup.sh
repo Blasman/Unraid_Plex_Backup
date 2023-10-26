@@ -7,14 +7,14 @@
 ################################################################################
 # ---------------------- USER CONFIG (REQUIRED TO EDIT) ---------------------- #
 ################################################################################
-PLEX_DIR="/mnt/primary/appdata/plex/Library/Application Support/Plex Media Server"  # "Plex Media Server" folder location *within* the plex appdata folder.
+PLEX_DIR="/mnt/primary/appdata/plex/Library/Application Support/Plex Media Server"  # FULL PATH to /Plex Media Server/ folder *within* the plex appdata folder.
 BACKUP_DIR="/mnt/user/Backup/Plex Metadata Backups"  # Backup folder location.
 HOURS_TO_KEEP_BACKUPS_FOR="324"  # Delete backups older than this many hours. Comment out or delete to disable.
-STOP_PLEX_DOCKER=false  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. Comment out or delete to disable.
-PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
 ################################################################################
 # --------------- OPTIONAL USER CONFIG (NOT REQUIRED TO EDIT) ---------------- #
 ################################################################################
+PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
+STOP_PLEX_DOCKER=false  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. Comment out or delete to disable.
 RUN_MOVER_BEFORE_BACKUP=false  # Run Unraid's 'mover' BEFORE backing up. Set to "true" (without quotes) to use. Comment out or delete to disable.
 RUN_MOVER_AFTER_BACKUP=false  # Run Unraid's 'mover' AFTER backing up. Set to "true" (without quotes) to use. Comment out or delete to disable.
 UNRAID_WEBGUI_START_MSG=true  # Send backup start message to the Unraid Web GUI. Set to "true" (without quotes) to use. Comment out or delete to disable.
@@ -35,8 +35,8 @@ ALSO_ABORT_ON_FAILED_CONNECTION=false  # Also abort the script if the connection
 # ---------------------------- END OF USER CONFIG ---------------------------- #
 ################################################################################
 
-# Function to append timestamps with milliseconds on all script messages printed to the console.
-echo_ts() { printf "[%(%Y_%m_%d)T %(%H:%M:%S)T.${EPOCHREALTIME: -6:3}] $@\\n"; }
+# Function to append timestamps with milliseconds accuracy on all script messages printed to the console.
+echo_ts() { printf "[%(%Y_%m_%d)T %(%H:%M:%S)T.${EPOCHREALTIME: -6:3}] $@\\n"; }  # Only use built-in bash functions.
 
 # Function to calculate a 'run timer' with precision accuracy as quickly as possible by subtracting one $EPOCHREALTIME value from another.
 run_timer() {  # If result is < 10 seconds, then 4 digits after decimal. Else If result is < 60 seconds, then 3 digits after decimal.
@@ -45,7 +45,7 @@ run_timer() {  # If result is < 10 seconds, then 4 digits after decimal. Else If
     elif [[ $run_time -lt 60000000 ]]; then echo "${run_time:0:2}.${run_time: -6:3}s";
     elif [[ $run_time -lt 3600000000 ]]; then echo "$((run_time % 3600000000 / 60000000))m ${run_time: -8:2}s";
     else echo "$((run_time / 3600000000))h $((run_time % 3600000000 / 60000000))m ${run_time: -8:2}s"; fi
-}  # Example Usage: echo "Completed in $(run_timer $start_time $EPOCHREALTIME)."
+}
 
 # Function to abort script if there are active users on the Plex server.
 abort_script_run_due_to_active_plex_sessions() {
@@ -67,7 +67,7 @@ verify_valid_path_variables() {
         clean_dir="${clean_dir%/}"  # Remove trailing slashes
         eval "$dir=\"$clean_dir\""  # Update the variable with the cleaned path
         if [ ! -d "$clean_dir" ]; then
-            echo "[ERROR] Directory not found: $clean_dir"
+            echo_ts "[ERROR] Directory not found: '$clean_dir/'"
             exit 1
         fi
     done
@@ -122,9 +122,9 @@ send_start_msg_to_unraid_webgui() {
 
 # Function to stop Plex docker.
 stop_plex() {
-    echo_ts "Stopping Plex Server..."
+    echo_ts "Stopping Plex docker..."
     docker stop "$PLEX_DOCKER_NAME" >/dev/null
-    echo_ts "Plex Server stopped."
+    echo_ts "Plex docker stopped."
 }
 
 # Function to create the tar file.
@@ -140,9 +140,9 @@ create_tarfile() {
 
 # Function to start Plex docker.
 start_plex() {
-    echo_ts "Starting Plex Server..."
+    echo_ts "Starting Plex docker..."
     docker start "$PLEX_DOCKER_NAME" >/dev/null
-    echo_ts "Plex Server started."
+    echo_ts "Plex docker started."
 }
 
 # Function to set permissions on the tar file.
