@@ -10,18 +10,18 @@
 ################################################################################
 PLEX_DIR="/mnt/primary/appdata/plex/Library/Application Support/Plex Media Server"  # FULL PATH to /Plex Media Server/ folder *within* the plex appdata folder.
 BACKUP_DIR="/mnt/user/Backup/Plex DB Backups"  # Backup folder location.
-HOURS_TO_KEEP_BACKUPS_FOR="95"  # Delete backups older than this many hours. (you may also comment out or delete to disable)
+HOURS_TO_KEEP_BACKUPS_FOR="95"  # Delete backups older than this many hours. Hrs to Days: [48=2|72=3|96=4|120=5|144=6|168=7|336=14|720=30] (you may also comment out or delete to disable)
 PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
-# ---------------------- PLEX TARBALL BACK UP SETTINGS ----------------------- #
-RUN_TARBALL_BACKUP_UPON_COMPLETION=false  # Set to 'true' (without quotes) to run the Tarball backup script in Unraid's user-scripts immediately after this script. It is an alternative to setting individual cron jobs for both backup scripts.
+# ---------------------- PLEX TARBALL BACK UP SETTINGS ----------------------- #  This is an alternative to setting individual cron jobs for both backup scripts.
+RUN_TARBALL_BACKUP_UPON_COMPLETION=false  # Set to 'true' (without quotes) to run the Tarball backup script in Unraid's user-scripts immediately after this script. 
 DAYS_TO_RUN_TARBALL_SCRIPT_ON="1 4"  # Days of the week to trigger the Tarball backup script on (separated by spaces). Same as would be in cron (most systems: 0 = Sunday, 6 = Saturday).
 NAME_OF_TARBALL_SCRIPT="Plex Metadata Backup"  # Name of the Tarball backup script in Unraid's user-scripts. (click on cogwheel, will be BASENAME dir. ie last dir of: '/boot/config/plugins/user.scripts/scripts/Plex Metadata Backup')
 ################################################################################
 #                 OPTIONAL USER CONFIG (NOT REQUIRED TO EDIT)                  #
 ################################################################################
-STOP_PLEX_DOCKER=true  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. (you may also comment out or delete to disable)
-UNRAID_WEBGUI_START_MSG=true  # Send backup start message to the Unraid Web GUI. Set to "true" (without quotes) to use. (you may also comment out or delete to disable)
-UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to "true" (without quotes) to use. (you may also comment out or delete to disable)
+STOP_PLEX_DOCKER=true  # Shutdown Plex docker before backup and restart it after backup. Set to 'true' (without quotes) to use. (you may also comment out or delete to disable)
+UNRAID_WEBGUI_START_MSG=true  # Send backup start message to the Unraid Web GUI. Set to 'true' (without quotes) to use. (you may also comment out or delete to disable)
+UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to 'true' (without quotes) to use. (you may also comment out or delete to disable)
 PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the backup sub-directory and files. (you may also comment out or delete to disable)
 SUBDIR_TEXT="Plex DB Backup"  # OPTIONALLY customize the text for the backup sub-directory name. As a precaution, the script only deletes old backups that match this pattern.
 TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # OPTIONALLY customize TIMESTAMP for backup sub-directory name.
@@ -167,7 +167,7 @@ run_plex_tarball_backup() {
             bash "/boot/config/plugins/user.scripts/scripts/$NAME_OF_TARBALL_SCRIPT/script"
         fi
     else
-        echo_ts "[ERROR] COULD NOT FIND '$NAME_OF_TARBALL_SCRIPT' IN UNRAID'S USER-SCRIPTS."
+        echo_ts "[ERROR] COULD NOT FIND '$NAME_OF_TARBALL_SCRIPT' IN UNRAID'S USER-SCRIPTS. CANNOT RUN PLEX TARBALL BACKUP SCRIPT."
     fi
 }
 
@@ -200,7 +200,7 @@ if [[ $STOP_PLEX_DOCKER == true ]]; then start_plex; fi
 if [[ $PERMISSIONS =~ ^[0-9]{3,4}$ ]]; then set_permissions; fi
 
 # Delete old backups.
-if [[ $HOURS_TO_KEEP_BACKUPS_FOR =~ ^[0-9]+(\.[0-9]+)?$ ]]; then delete_old_backups; fi
+if [[ $HOURS_TO_KEEP_BACKUPS_FOR =~ ^[0-9]+$ ]]; then delete_old_backups; fi
 
 # Print backup completed message to console with the 'run_time' for the backup.
 complete_backup
