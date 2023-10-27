@@ -9,16 +9,16 @@
 ################################################################################
 PLEX_DIR="/mnt/primary/appdata/plex/Library/Application Support/Plex Media Server"  # FULL PATH to /Plex Media Server/ folder *within* the plex appdata folder.
 BACKUP_DIR="/mnt/user/Backup/Plex Metadata Backups"  # Backup folder location.
-HOURS_TO_KEEP_BACKUPS_FOR="324"  # Delete backups older than this many hours. (you may also comment out or delete to disable)
+HOURS_TO_KEEP_BACKUPS_FOR="335"  # Delete backups older than this many hours. Hrs to Days: [48=2|72=3|96=4|120=5|144=6|168=7|336=14|720=30] (you may also comment out or delete to disable)
 ################################################################################
 #                 OPTIONAL USER CONFIG (NOT REQUIRED TO EDIT)                  #
 ################################################################################
 PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
-STOP_PLEX_DOCKER=false  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. (you may also comment out or delete to disable)
-RUN_MOVER_BEFORE_BACKUP=false  # Run Unraid's 'mover' BEFORE backing up. Set to "true" (without quotes) to use. (you may also comment out or delete to disable)
-RUN_MOVER_AFTER_BACKUP=false  # Run Unraid's 'mover' AFTER backing up. Set to "true" (without quotes) to use. (you may also comment out or delete to disable)
-UNRAID_WEBGUI_START_MSG=true  # Send backup start message to the Unraid Web GUI. Set to "true" (without quotes) to use. (you may also comment out or delete to disable)
-UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to "true" (without quotes) to use. (you may also comment out or delete to disable)
+STOP_PLEX_DOCKER=false  # Shutdown Plex docker before backup and restart it after backup. Set to 'true' (without quotes) to use. (you may also comment out or delete to disable)
+RUN_MOVER_BEFORE_BACKUP=false  # Run Unraid's 'mover' BEFORE backing up. Set to 'true' (without quotes) to use. (you may also comment out or delete to disable)
+RUN_MOVER_AFTER_BACKUP=false  # Run Unraid's 'mover' AFTER backing up. Set to 'true' (without quotes) to use. (you may also comment out or delete to disable)
+UNRAID_WEBGUI_START_MSG=true  # Send backup start message to the Unraid Web GUI. Set to 'true' (without quotes) to use. (you may also comment out or delete to disable)
+UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to 'true' (without quotes) to use. (you may also comment out or delete to disable)
 PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the final tar file. (you may also comment out or delete to disable)
 TARFILE_TEXT="Plex Metadata Backup"  # OPTIONALLY customize the text for the backup tar file. As a precaution, the script only deletes old backups that match this pattern.
 TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # OPTIONALLY customize TIMESTAMP for the tar filename.
@@ -176,7 +176,7 @@ if [[ $ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS == true ]]; then abort_script_ru
 verify_valid_path_variables
 
 # Delete old backup tar files first to create more usable storage space.
-if [[ $HOURS_TO_KEEP_BACKUPS_FOR =~ ^[0-9]+(\.[0-9]+)?$ ]]; then delete_old_backups; fi
+if [[ $HOURS_TO_KEEP_BACKUPS_FOR =~ ^[0-9]+$ ]]; then delete_old_backups; fi
 
 # Run mover before Backup.
 if [[ $RUN_MOVER_BEFORE_BACKUP == true ]]; then run_mover; fi
