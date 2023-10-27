@@ -5,13 +5,13 @@
 # You can edit the tar command used in the config below. (ie. specify different folders/files to backup, use compression, etc.)
 
 ################################################################################
-# ---------------------- USER CONFIG (REQUIRED TO EDIT) ---------------------- #
+#                        USER CONFIG (REQUIRED TO EDIT)                        #
 ################################################################################
 PLEX_DIR="/mnt/primary/appdata/plex/Library/Application Support/Plex Media Server"  # FULL PATH to /Plex Media Server/ folder *within* the plex appdata folder.
 BACKUP_DIR="/mnt/user/Backup/Plex Metadata Backups"  # Backup folder location.
 HOURS_TO_KEEP_BACKUPS_FOR="324"  # Delete backups older than this many hours. (you may also comment out or delete to disable)
 ################################################################################
-# --------------- OPTIONAL USER CONFIG (NOT REQUIRED TO EDIT) ---------------- #
+#                 OPTIONAL USER CONFIG (NOT REQUIRED TO EDIT)                  #
 ################################################################################
 PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
 STOP_PLEX_DOCKER=false  # Shutdown Plex docker before backup and restart it after backup. Set to "true" (without quotes) to use. (you may also comment out or delete to disable)
@@ -33,7 +33,7 @@ PLEX_TOKEN="xxxxxxxxxxxxxxxxxxxx"  # ONLY REQUIRED if using 'ABORT_SCRIPT_RUN_IF
 INCLUDE_PAUSED_SESSIONS=false  # Include paused Plex sessions if 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
 ALSO_ABORT_ON_FAILED_CONNECTION=false  # Also abort the script if the connection to the Plex server fails when 'ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS' is set to 'true'.
 ################################################################################
-# ---------------------------- END OF USER CONFIG ---------------------------- #
+#                              END OF USER CONFIG                              #
 ################################################################################
 
 # Function that utilizes only built-in bash functions (ie not $date) to append timestamps with milliseconds on all script messages printed to the console.
@@ -52,7 +52,7 @@ run_timer() {  # If result is < 10 seconds, then 4 digits after decimal. Else If
 # Function to abort script if there are active users on the Plex server.
 abort_script_run_due_to_active_plex_sessions() {
     response=$(curl -s --fail --connect-timeout 10 "${PLEX_SERVER_URL_AND_PORT}/status/sessions?X-Plex-Token=${PLEX_TOKEN}")
-    if [[ $? -ne 0 ]] && [[ $ALSO_ABORT_ON_FAILED_CONNECTION = true ]]; then
+    if [[ $? -ne 0 ]] && [[ $ALSO_ABORT_ON_FAILED_CONNECTION == true ]]; then
         echo_ts "[ERROR] Could not connect to Plex server. Aborting Plex Metadata Backup."
         exit 1
     elif [[ $response == *'state="playing"'* ]] || ( [[ $INCLUDE_PAUSED_SESSIONS = true ]] && [[ $response == *'state="paused"'* ]] ); then
@@ -66,8 +66,8 @@ verify_valid_path_variables() {
     local dir_vars=("BACKUP_DIR" "PLEX_DIR")
     for dir in "${dir_vars[@]}"; do
         local clean_dir="${!dir}"
-        clean_dir="${clean_dir%/}"  # Remove trailing slashes
-        eval "$dir=\"$clean_dir\""  # Update the variable with the cleaned path
+        clean_dir="${clean_dir%/}"  # Remove trailing slashes.
+        eval "$dir=\"$clean_dir\""  # Update the variable with the cleaned path.
         if [ ! -d "$clean_dir" ]; then
             echo_ts "[ERROR] Directory not found: '$clean_dir/'"
             exit 1
@@ -165,9 +165,9 @@ send_success_msg_to_unraid_webgui() {
     /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex Tarball Back Up Complete." -d "Run time: $run_time. Filesize: $tarfile_filesize."
 }
 
-###############################################
-############# BACKUP BEGINS HERE ##############
-###############################################
+################################################################################
+#                            BEGIN PROCESSING HERE                             #
+################################################################################
 
 # Abort script if there are active users on the Plex server.
 if [[ $ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS == true ]]; then abort_script_run_due_to_active_plex_sessions; fi
