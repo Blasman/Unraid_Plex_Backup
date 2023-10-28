@@ -7,23 +7,25 @@
 ################################################################################
 #                        USER CONFIG (REQUIRED TO EDIT)                        #
 ################################################################################
-PLEX_DIR="/mnt/primary/appdata/plex/Library/Application Support/Plex Media Server"  # FULL PATH to /Plex Media Server/ folder *within* the plex appdata folder.
-BACKUP_DIR="/mnt/user/Backup/Plex Metadata Backups"  # Backup folder location.
-HOURS_TO_KEEP_BACKUPS_FOR="335"  # Delete backups older than this many hours. Hrs to Days: [48=2|72=3|96=4|120=5|144=6|168=7|336=14|720=30] (you may also comment out or delete to disable)
+BACKUP_DIR="/mnt/user/Backup/Plex Tarball Backups"  # Backup directory.
+PLEX_DIR="/mnt/primary/appdata/plex"  # Plex appdata directory.
+HOURS_TO_KEEP_BACKUPS_FOR="335"  # Delete backups older than this many hours. [Hours=Days|72=3|96=4|120=5|144=6|168=7|336=14|720=30] (you may also comment out or delete to disable)
+
 ################################################################################
 #                 OPTIONAL USER CONFIG (NOT REQUIRED TO EDIT)                  #
 ################################################################################
-PLEX_DOCKER_NAME="plex"  # Name of Plex docker (needed for 'STOP_PLEX_DOCKER' variable).
+PLEX_DOCKER_NAME="plex"  # Name of Plex docker (required for 'STOP_PLEX_DOCKER' variable).
 STOP_PLEX_DOCKER=false  # Shutdown Plex docker before backup and restart it after backup. Set to 'true' (without quotes) to use. (you may also comment out or delete to disable)
 RUN_MOVER_BEFORE_BACKUP=false  # Run Unraid's 'mover' BEFORE backing up. Set to 'true' (without quotes) to use. (you may also comment out or delete to disable)
 RUN_MOVER_AFTER_BACKUP=false  # Run Unraid's 'mover' AFTER backing up. Set to 'true' (without quotes) to use. (you may also comment out or delete to disable)
 UNRAID_WEBGUI_START_MSG=true  # Send backup start message to the Unraid Web GUI. Set to 'true' (without quotes) to use. (you may also comment out or delete to disable)
 UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to 'true' (without quotes) to use. (you may also comment out or delete to disable)
+USE_LOCK_FILE=true  # Set to 'true' (without quotes) to enable use of lock file to prevent overlapping backups. 'rm /tmp/plex_tarball_backup.tmp' to delete lock file if required. (you may also comment out or delete to disable)
 PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the final tar file. (you may also comment out or delete to disable)
-TARFILE_TEXT="Plex Metadata Backup"  # OPTIONALLY customize the text for the backup tar file. As a precaution, the script only deletes old backups that match this pattern.
+TARFILE_TEXT="Plex Tarball Backup"  # OPTIONALLY customize the text for the backup tar file. As a precaution, the script only deletes old backups that match this pattern.
 TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # OPTIONALLY customize TIMESTAMP for the tar filename.
 COMPLETE_TAR_FILENAME() { echo "[$(TIMESTAMP)] $TARFILE_TEXT.tar"; }  # OPTIONALLY customize the complete tar file name (adding extension) with the TIMESTAMP and TARFILE_TEXT.
-TAR_COMMAND() {  # OPTIONALLY customize the TAR command. Use "$tarfile_complete_path" for the tar file name. This command is ran from within the $PLEX_DIR directory.
+TAR_COMMAND() {  # OPTIONALLY customize the TAR command. Use "$tarfile_complete_path" for the tar file name. This command is ran from within the '/Plex Media Server/' directory.
     tar -cf "$tarfile_complete_path" "Media" "Metadata"
 }
 # ---------------- ABORT SCRIPT IF ACTIVE PLEX USER SESSIONS ----------------- #
@@ -40,7 +42,7 @@ ALSO_ABORT_ON_FAILED_CONNECTION=false  # Also abort the script if the connection
 echo_ts() { printf "[%(%Y_%m_%d)T %(%H:%M:%S)T.${EPOCHREALTIME: -6:3}] $@\\n"; }
 
 # Function to calculate a high precision 'run timer' as quickly as possible by subtracting one $EPOCHREALTIME value from another.
-run_timer() {  # If result is < 10 seconds, then 4 digits after decimal. Else If result is < 60 seconds, then 3 digits after decimal.
+get_run_time() {  # If result is < 10 seconds, then 4 digits after decimal. Else If result is < 60 seconds, then 3 digits after decimal.
     local run_time=$((${2/./} - ${1/./}))
     if [[ $run_time -lt 10000000 ]]; then printf -v run_time "%07d" $run_time; echo "${run_time:0:1}.${run_time: -6:4}s";
     elif [[ $run_time -lt 60000000 ]]; then echo "${run_time:0:2}.${run_time: -6:3}s";
@@ -49,30 +51,68 @@ run_timer() {  # If result is < 10 seconds, then 4 digits after decimal. Else If
     else echo "$((run_time / 86400000000))d $((run_time / 3600000000 % 24))h $((run_time % 3600000000 / 60000000))m"; fi
 }
 
+# Function to get the state of the Plex docker.
+get_plex_docker_state() {
+    local response=$(docker inspect -f '{{.State.Status}}' "$PLEX_DOCKER_NAME" 2>/dev/null)
+    if [[ "$response" =~ ^(running|restarting|started)$ ]]; then echo "running";
+    elif [[ "$response" =~ ^(created|exited|paused|stopped)$ ]]; then echo "stopped";
+    else echo "error"; fi
+}
+
 # Function to abort script if there are active users on the Plex server.
 abort_script_run_due_to_active_plex_sessions() {
-    response=$(curl -s --fail --connect-timeout 10 "${PLEX_SERVER_URL_AND_PORT}/status/sessions?X-Plex-Token=${PLEX_TOKEN}")
+    local response=$(curl -s --fail --connect-timeout 10 "${PLEX_SERVER_URL_AND_PORT}/status/sessions?X-Plex-Token=${PLEX_TOKEN}")
     if [[ $? -ne 0 ]] && [[ $ALSO_ABORT_ON_FAILED_CONNECTION == true ]]; then
-        echo_ts "[ERROR] Could not connect to Plex server. Aborting Plex Metadata Backup."
+        echo_ts "[ERROR] Could not connect to Plex server. Aborting Plex Tarball Backup."
         exit 1
-    elif [[ $response == *'state="playing"'* ]] || ( [[ $INCLUDE_PAUSED_SESSIONS = true ]] && [[ $response == *'state="paused"'* ]] ); then
-        echo_ts "Active users on Plex server. Aborting Plex Metadata Backup."
+    elif [[ $response == *'state="playing"'* ]] || ( [[ $INCLUDE_PAUSED_SESSIONS == true ]] && [[ $response == *'state="paused"'* ]] ); then
+        echo_ts "Active users on Plex server. Aborting Plex Tarball Backup."
         exit 0
     fi
 }
 
-# Function to verify that "$BACKUP_DIR" and "$PLEX_DIR" are valid paths.
-verify_valid_path_variables() {
+# Function to verify user variables and handle errors.
+prepare_backup() {
+    if [[ $USE_LOCK_FILE == true ]] && [[ -f "/tmp/plex_tarball_backup.tmp" ]]; then
+        echo_ts "[ERROR] Plex Tarball backup is currently active! Lock file can be removed by typing 'rm /tmp/plex_tarball_backup.tmp'. Exiting."
+        exit 1
+    fi
+    if [[ $ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS == true ]]; then abort_script_run_due_to_active_plex_sessions; fi
+    if [[ $STOP_PLEX_DOCKER == true ]]; then
+        plex_docker_state="$(get_plex_docker_state)"
+        if [[ "$plex_docker_state" == "error" ]]; then
+            echo_ts "[ERROR] Could not find '$PLEX_DOCKER_NAME' docker. Exiting."
+            exit 1
+        fi
+    fi
     local dir_vars=("BACKUP_DIR" "PLEX_DIR")
     for dir in "${dir_vars[@]}"; do
         local clean_dir="${!dir}"
         clean_dir="${clean_dir%/}"  # Remove trailing slashes.
         eval "$dir=\"$clean_dir\""  # Update the variable with the cleaned path.
         if [ ! -d "$clean_dir" ]; then
-            echo_ts "[ERROR] Directory not found: '$clean_dir/'"
+            echo_ts "[ERROR] Directory not found: '$clean_dir/'. Exiting."
             exit 1
         fi
-    done
+    done  # We assume that user has standard Plex appdata folder structure when continuing here.
+    plex_pms_dir="$PLEX_DIR/Library/Application Support/Plex Media Server"
+    if [[ ! -f "$plex_pms_dir/Plug-in Support/Databases/com.plexapp.plugins.library.db" ]]; then
+        echo_ts "[ERROR] COULD NOT FIND Plex database file 'com.plexapp.plugins.library.db'. Please check that '$PLEX_DIR/' is the proper directory for your Plex appdata. Exiting."
+        exit 1
+    fi
+}
+
+# Function to send backup start notification to Unraid's Web GUI.
+send_start_msg_to_unraid_webgui() {
+    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex Tarball Back Up Started."
+}
+
+# Function to record the "start time of backup" when 'run_time' is calculated at end of backup.
+start_backup() {
+    script_start_time=$EPOCHREALTIME
+    if [[ $USE_LOCK_FILE == true ]]; then touch "/tmp/plex_tarball_backup.tmp"; fi
+    echo_ts "[PLEX TARBALL BACKUP STARTED]"
+    if [[ $UNRAID_WEBGUI_START_MSG == true ]]; then send_start_msg_to_unraid_webgui; fi
 }
 
 # Function to calculate the age of a tar file in seconds.
@@ -92,7 +132,7 @@ delete_old_backups() {
             local tarfile_age=$(get_tarfile_age "$tarfile")
             if [ "$tarfile_age" -gt "$cutoff_age" ]; then
                 rm -rf "$tarfile"
-                echo_ts "Deleted old backup: $tarfile"
+                echo_ts "Deleted old Plex Tarball backup: $tarfile"
             fi
         fi
     done
@@ -111,53 +151,46 @@ run_mover() {
     fi
 }
 
-# Function to record the "start time of backup" when 'run_time' is calculated at end of backup.
-start_backup() {
-    script_start_time=$EPOCHREALTIME
-    echo_ts "[PLEX TARBALL BACKUP STARTED]"
-}
-
-# Function to send backup start notification to Unraid's Web GUI.
-send_start_msg_to_unraid_webgui() {
-    /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex Tarball Back Up Started."
-}
-
 # Function to stop Plex docker.
 stop_plex() {
-    echo_ts "Stopping Plex docker..."
-    docker stop "$PLEX_DOCKER_NAME" >/dev/null
-    echo_ts "Plex docker stopped."
+    if [[ "$plex_docker_state" == "running" ]]; then
+        echo_ts "Stopping Plex docker..."
+        docker stop "$PLEX_DOCKER_NAME" >/dev/null
+        echo_ts "Plex docker stopped."
+    else
+        echo_ts "Plex docker already stopped. Skipping docker stop."
+    fi
+}
+
+# Function to set permissions on the tar file.
+set_permissions() {
+  # echo_ts "Running 'chmod $PERMISSIONS' on file..."
+    chmod $PERMISSIONS "$tarfile_complete_path"
+  # echo_ts "Successfully set permissions on file."
 }
 
 # Function to create the tar file.
 create_tarfile() {
     local create_tarfile_start_time=$EPOCHREALTIME
-    cd "$PLEX_DIR"  # Navigate to $PLEX_DIR working directory to shorten the tar command.
+    cd "$plex_pms_dir"  # Navigate to $plex_pms_dir working directory to shorten the tar command.
     tarfile_complete_path="$BACKUP_DIR/$(COMPLETE_TAR_FILENAME)"
     echo_ts "Creating file: '$tarfile_complete_path'"
     TAR_COMMAND
     tarfile_filesize=$(du -hs "$tarfile_complete_path" | awk '{print $1}')
-    echo_ts "Created $tarfile_filesize file in $(run_timer $create_tarfile_start_time $EPOCHREALTIME)."
+    echo_ts "Created $tarfile_filesize file in $(get_run_time $create_tarfile_start_time $EPOCHREALTIME)."
+    if [[ $PERMISSIONS =~ ^[0-9]{3,4}$ ]]; then set_permissions; fi
 }
 
 # Function to start Plex docker.
 start_plex() {
-    echo_ts "Starting Plex docker..."
-    docker start "$PLEX_DOCKER_NAME" >/dev/null
-    echo_ts "Plex docker started."
-}
-
-# Function to set permissions on the tar file.
-set_permissions() {
-    echo_ts "Running 'chmod $PERMISSIONS' on file..."
-    chmod $PERMISSIONS "$tarfile_complete_path"
-    echo_ts "Successfully set permissions on file."
-}
-
-# Function to print backup completed message to console with the 'run_time' variable.
-complete_backup() {
-    run_time=$(run_timer $script_start_time $EPOCHREALTIME)
-    echo_ts "[PLEX TARBALL BACKUP COMPLETE] Run Time: $run_time. Filesize: $tarfile_filesize."
+    plex_docker_state="$(get_plex_docker_state)"
+    if [[ "$plex_docker_state" == "stopped" ]]; then
+        echo_ts "Starting Plex docker..."
+        docker start "$PLEX_DOCKER_NAME" >/dev/null
+        echo_ts "Plex docker started."
+    else
+        echo_ts "Plex docker already started. Skipping docker start."
+    fi
 }
 
 # Function to send backup success notification to Unraid's Web GUI.
@@ -165,15 +198,20 @@ send_success_msg_to_unraid_webgui() {
     /usr/local/emhttp/webGui/scripts/notify -i normal -e "Plex Tarball Back Up Complete." -d "Run time: $run_time. Filesize: $tarfile_filesize."
 }
 
+# Function to print backup completed message to console with the 'run_time' variable.
+complete_backup() {
+    run_time=$(get_run_time $script_start_time $EPOCHREALTIME)
+    if [[ $USE_LOCK_FILE == true ]]; then rm "/tmp/plex_tarball_backup.tmp"; fi
+    echo_ts "[PLEX TARBALL BACKUP COMPLETE] Run Time: $run_time. Filesize: $tarfile_filesize."
+    if [[ $UNRAID_WEBGUI_SUCCESS_MSG == true ]]; then send_success_msg_to_unraid_webgui; fi
+}
+
 ################################################################################
 #                            BEGIN PROCESSING HERE                             #
 ################################################################################
 
-# Abort script if there are active users on the Plex server.
-if [[ $ABORT_SCRIPT_RUN_IF_ACTIVE_PLEX_SESSIONS == true ]]; then abort_script_run_due_to_active_plex_sessions; fi
-
-# Verify that $BACKUP_DIR and $PLEX_DIR are valid paths.
-verify_valid_path_variables
+# Verify correctly set user variables and other error handling.
+prepare_backup
 
 # Delete old backup tar files first to create more usable storage space.
 if [[ $HOURS_TO_KEEP_BACKUPS_FOR =~ ^[0-9]+$ ]]; then delete_old_backups; fi
@@ -184,26 +222,17 @@ if [[ $RUN_MOVER_BEFORE_BACKUP == true ]]; then run_mover; fi
 # Print backup start message to console. This is consided the "start of the backup" when 'run_time' is calculated.
 start_backup
 
-# Send backup started notification to Unraid's Web GUI.
-if [[ $UNRAID_WEBGUI_START_MSG == true ]]; then send_start_msg_to_unraid_webgui; fi
-
 # Stop Plex Docker.
 if [[ $STOP_PLEX_DOCKER == true ]]; then stop_plex; fi
 
 # Create the tar file.
 create_tarfile
 
-# Start Plex Docker before doing anything else.
+# Start Plex Docker.
 if [[ $STOP_PLEX_DOCKER == true ]]; then start_plex; fi
-
-# Set permissions for the tar file.
-if [[ $PERMISSIONS =~ ^[0-9]{3,4}$ ]]; then set_permissions; fi
 
 # Print backup completed message to console with the 'run_time' for the backup.
 complete_backup
-
-# Send backup completed notification to Unraid's Web GUI.
-if [[ $UNRAID_WEBGUI_SUCCESS_MSG == true ]]; then send_success_msg_to_unraid_webgui; fi
 
 # Run mover after Backup.
 if [[ $RUN_MOVER_AFTER_BACKUP == true ]]; then run_mover; fi
