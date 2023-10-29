@@ -16,3 +16,17 @@ The Plex folders `Media` and `Metadata` are generally large directories with *se
 Why not just one script instead of two? While it is true that both scripts contain almost completely similar functions and variables, the intent of use is for Unraid's User-Scripts plug-in which allows you to set a unique cron job for each individual script (run them on different schedules). This keeps things much simpler. In the User-Scripts plug-in, you create a new user script, then copy and paste the script into it, then edit the `user config` portion of the script, save, and then set the cron schedule. Easy peasy. Having them as separate scripts also allows you to run either type of backup "on demand" in the user-scripts plugin.
 
 If you prefer to have just one cron schedule for both scripts, that is also possible by editing the `user config` in `plex_db_backup.sh` to have `plex_tarball_backup.sh` run immediately after `plex_db_backup.sh` has finished processing on specified days of the week.
+
+## Log Example
+
+```
+[2023_10_28 05:00:03.230] [PLEX DB BACKUP STARTED]
+[2023_10_28 05:00:03.246] Stopping Plex docker...
+[2023_10_28 05:00:07.503] Plex docker stopped.
+[2023_10_28 05:00:07.505] Copying files to: '/mnt/user/Backup/Plex DB Backups/[2023_10_28@05.00.07] Plex DB Backup'
+[2023_10_28 05:00:10.361] Copied 1.4G of files in 2.8577s. 
+[2023_10_28 05:00:10.385] Starting Plex docker...
+[2023_10_28 05:00:10.557] Plex docker started.
+[2023_10_28 05:00:10.565] Deleted old Plex DB Backup: '[2023_10_24@05.00.06] Plex DB Backup'
+[2023_10_28 05:00:10.666] [PLEX DB BACKUP COMPLETE] Run Time: 7.4350s. Folder size: 1.4G.
+```
