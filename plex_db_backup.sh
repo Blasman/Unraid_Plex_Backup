@@ -11,10 +11,10 @@ BACKUP_DIR="/mnt/user/Backup/Plex DB Backups"  # Backup directory.
 PLEX_DIR="/mnt/primary/appdata/plex"  # Plex appdata directory.
 PLEX_DOCKER_NAME="plex"  # Name of Plex docker (required for 'STOP_PLEX_DOCKER' variable).
 HOURS_TO_KEEP_BACKUPS_FOR="95"  # Delete backups older than this many hours. [Hours=Days|72=3|96=4|120=5|144=6|168=7|336=14|720=30] (you may also comment out or delete to disable)
-# ----------------- ALSO RUN TARBALL BACKUP AFTER DB BACKUP ------------------ #  This is an alternative to setting individual cron jobs for both backup scripts.
+# ----------------- ALSO RUN TARBALL BACKUP AFTER DB BACKUP ------------------ # Below is an alternative to setting individual cron jobs for both backup scripts.
 RUN_TARBALL_BACKUP_UPON_COMPLETION=false  # Set to 'true' (without quotes) to run the Tarball backup script in Unraid's user-scripts immediately after this script. 
 DAYS_TO_RUN_TARBALL_SCRIPT_ON="1 4"  # Days of the week to trigger the Tarball backup script on (separated by spaces). Same as would be in cron (most systems: 0 = Sunday, 6 = Saturday).
-NAME_OF_TARBALL_SCRIPT="Plex Tarball Backup"  # Name of the Tarball backup script in Unraid's user-scripts. (click on cogwheel, will be BASENAME dir. ie last dir of: '/boot/config/plugins/user.scripts/scripts/Plex Metadata Backup')
+NAME_OF_TARBALL_SCRIPT="Plex Tarball Backup"  # Name of the Tarball backup script in Unraid's user-scripts. (click on cogwheel, will be BASENAME dir. ie last dir of: '/boot/config/plugins/user.scripts/scripts/Plex Tarball Backup')
 
 ################################################################################
 #             OPTIONAL ADVANCED USER CONFIG (NOT REQUIRED TO EDIT)             #
@@ -45,14 +45,15 @@ ALSO_ABORT_ON_FAILED_CONNECTION=false  # Also abort the script if the connection
 # Function that utilizes only built-in bash functions (ie not $date) to append timestamps with milliseconds on all script messages printed to the console.
 echo_ts() { printf "[%(%Y_%m_%d)T %(%H:%M:%S)T.${EPOCHREALTIME: -6:3}] $@\\n"; }
 
-# Function to calculate a high precision 'run timer' as quickly as possible by subtracting one $EPOCHREALTIME value from another.
-get_run_time() {  # If result is < 10 seconds, then 4 digits after decimal. Else If result is < 60 seconds, then 3 digits after decimal.
-    local run_time=$((${2/./} - ${1/./}))
-    if [[ $run_time -lt 10000000 ]]; then printf -v run_time "%07d" $run_time; echo "${run_time:0:1}.${run_time: -6:4}s";
-    elif [[ $run_time -lt 60000000 ]]; then echo "${run_time:0:2}.${run_time: -6:3}s";
-    elif [[ $run_time -lt 3600000000 ]]; then echo "$((run_time % 3600000000 / 60000000))m $((run_time % 60000000 / 1000000))s";
-    elif [[ $run_time -lt 86400000000 ]]; then echo "$((run_time / 3600000000))h $((run_time % 3600000000 / 60000000))m $((run_time % 60000000 / 1000000))s";
-    else echo "$((run_time / 86400000000))d $((run_time / 3600000000 % 24))h $((run_time % 3600000000 / 60000000))m"; fi
+# Function to calculate a high precision run timer by subtracting one $EPOCHREALTIME value from another.
+run_timer() {
+    local run_time=$((${2/./} - ${1/./}))  # Remove decimals in $EPOCHREALTIME values and subtract start time from end time.     #    Examples
+    if [[ $run_time -lt 1000000 ]]; then printf -v run_time "%06d" $run_time; echo ".${run_time: -6:4}s";                        #      .1234s
+    elif [[ $run_time -lt 10000000 ]]; then echo "${run_time:0:1}.${run_time: -6:3}s";                                           #      1.234s
+    elif [[ $run_time -lt 60000000 ]]; then echo "${run_time:0:2}.${run_time: -6:3}s";                                           #     12.345s
+    elif [[ $run_time -lt 3600000000 ]]; then echo "$((run_time % 3600000000 / 60000000))m $((run_time % 60000000 / 1000000))s"; #      1m 23s
+    elif [[ $run_time -lt 86400000000 ]]; then echo "$((run_time / 3600000000))h $((run_time % 3600000000 / 60000000))m";        #      1h 23m
+    else echo "$((run_time / 86400000000))d $((run_time / 3600000000 % 24))h $((run_time % 3600000000 / 60000000))m"; fi         #  1d 23h 45m
 }
 
 # Function to get the state of the Plex docker.
@@ -150,7 +151,7 @@ backup_files() {
     mkdir -p "$backup_path"
     BACKUP_COMMAND
     backup_path_filesize=$(du -hs "$backup_path" | awk '{print $1}')
-    echo_ts "Copied $backup_path_filesize of files in $(get_run_time $backup_files_start_time $EPOCHREALTIME). "
+    echo_ts "Copied $backup_path_filesize of files in $(run_timer $backup_files_start_time $EPOCHREALTIME). "
     if [[ $PERMISSIONS =~ ^[0-9]{3,4}$ ]]; then set_permissions; fi
 }
 
@@ -196,7 +197,7 @@ send_success_msg_to_unraid_webgui() {
 
 # Function to print backup completed message to console with the 'run_time' variable.
 complete_backup() {
-    run_time=$(get_run_time $script_start_time $EPOCHREALTIME)
+    run_time=$(run_timer $script_start_time $EPOCHREALTIME)
     if [[ $USE_LOCK_FILE == true ]]; then rm "/tmp/plex_db_backup.tmp"; fi
     echo_ts "[PLEX DB BACKUP COMPLETE] Run Time: $run_time. Folder size: $backup_path_filesize."
     if [[ $UNRAID_WEBGUI_SUCCESS_MSG == true ]]; then send_success_msg_to_unraid_webgui; fi
