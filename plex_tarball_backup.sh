@@ -20,7 +20,7 @@ RUN_MOVER_BEFORE_BACKUP=false  # Run Unraid's 'mover' BEFORE backing up. Set to 
 RUN_MOVER_AFTER_BACKUP=false  # Run Unraid's 'mover' AFTER backing up. Set to 'true' (without quotes) to use. (you may also comment out or delete to disable)
 UNRAID_WEBGUI_START_MSG=true  # Send backup start message to the Unraid Web GUI. Set to 'true' (without quotes) to use. (you may also comment out or delete to disable)
 UNRAID_WEBGUI_SUCCESS_MSG=true  # Send backup success message to the Unraid Web GUI. Set to 'true' (without quotes) to use. (you may also comment out or delete to disable)
-USE_LOCK_FILE=true  # Set to 'true' (without quotes) to enable use of lock file to prevent overlapping backups. 'rm /tmp/plex_tarball_backup.tmp' to delete lock file if required. (you may also comment out or delete to disable)
+USE_LOCK_FILE=false  # Set to 'true' (without quotes) to enable use of lock file to prevent overlapping backups. 'rm /tmp/plex_tarball_backup.tmp' to delete lock file if required. (you may also comment out or delete to disable)
 PERMISSIONS="777"  # Set to any 3 or 4 digit value to have chmod set those permissions on the final tar file. (you may also comment out or delete to disable)
 TARFILE_TEXT="Plex Tarball Backup"  # OPTIONALLY customize the text for the backup tar file. As a precaution, the script only deletes old backups that match this pattern.
 TIMESTAMP() { date +"%Y_%m_%d@%H.%M.%S"; }  # OPTIONALLY customize TIMESTAMP for the tar filename.
