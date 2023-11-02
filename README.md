@@ -24,9 +24,9 @@ If you prefer to have just one cron schedule for both scripts, that is also poss
 [2023_10_28 05:00:03.246] Stopping Plex docker...
 [2023_10_28 05:00:07.503] Plex docker stopped.
 [2023_10_28 05:00:07.505] Copying files to: '/mnt/user/Backup/Plex DB Backups/[2023_10_28@05.00.07] Plex DB Backup'
-[2023_10_28 05:00:10.361] Copied 1.4G of files in 2.8577s. 
+[2023_10_28 05:00:10.361] Copied 1.4G of files in 2.857s. 
 [2023_10_28 05:00:10.385] Starting Plex docker...
 [2023_10_28 05:00:10.557] Plex docker started.
 [2023_10_28 05:00:10.565] Deleted old Plex DB Backup: '[2023_10_24@05.00.06] Plex DB Backup'
-[2023_10_28 05:00:10.666] [PLEX DB BACKUP COMPLETE] Run Time: 7.4350s. Folder size: 1.4G.
+[2023_10_28 05:00:10.666] [PLEX DB BACKUP COMPLETE] Run Time: 7.435s. Folder size: 1.4G.
 ```
