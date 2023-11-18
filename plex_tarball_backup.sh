@@ -111,7 +111,10 @@ send_start_msg_to_unraid_webgui() {
 # Function to record the "start time of backup" when 'run_time' is calculated at end of backup.
 start_backup() {
     script_start_time=$EPOCHREALTIME
-    if [[ $USE_LOCK_FILE == true ]]; then touch "/tmp/plex_tarball_backup.tmp"; fi
+    if [[ $USE_LOCK_FILE == true ]]; 
+        then touch "/tmp/plex_tarball_backup.tmp"
+        trap 'rm -f /tmp/plex_tarball_backup.tmp' exit
+    fi
     echo_ts "[PLEX TARBALL BACKUP STARTED]"
     if [[ $UNRAID_WEBGUI_START_MSG == true ]]; then send_start_msg_to_unraid_webgui; fi
 }
@@ -202,7 +205,6 @@ send_success_msg_to_unraid_webgui() {
 # Function to print backup completed message to console with the 'run_time' variable.
 complete_backup() {
     run_time=$(run_timer $script_start_time $EPOCHREALTIME)
-    if [[ $USE_LOCK_FILE == true ]]; then rm "/tmp/plex_tarball_backup.tmp"; fi
     echo_ts "[PLEX TARBALL BACKUP COMPLETE] Run Time: $run_time. Filesize: $tarfile_filesize."
     if [[ $UNRAID_WEBGUI_SUCCESS_MSG == true ]]; then send_success_msg_to_unraid_webgui; fi
 }
