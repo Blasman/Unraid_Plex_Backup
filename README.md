@@ -1,4 +1,7 @@
 # Unraid_Plex_Backup
+
+If using a ZFS filesystem, I recommend using [this script](https://github.com/Blasman/Unraid_Docker_ZFS_AIO_Backup) that I made instead. Otherwise, read on...
+
 User scripts for Unraid to backup only the essential Plex server data and minimize Plex server downtime. There are two users scripts that are similar yet have key differences. Choose either or both depending on your needs.
 
 [plex_db_backup.sh](plex_db_backup.sh) is designed for backing up the files that require Plex to be shutdown. By default these are the two main Database files (`com.plexapp.plugins.library.db` and `com.plexapp.plugins.library.blobs.db`) and `Preferences.xml` file. It backs these files up in a sub-folder with a timestamp of the current time to the specified backup directory. This is a script that is usually ran as a nightly cron job during off peak hours of Plex usage.
